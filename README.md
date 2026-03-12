@@ -6,7 +6,7 @@
     ██╔══██║██╔═██╗ ██╔══██║██╔══██╗██║
     ██║  ██║██║  ██╗██║  ██║██║  ██║██║
     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝
-          ✧  ア カ リ  ✧  1.3.1
+          ✧  ア カ リ  ✧  1.2.1
       ✦ · . ˚ ✦ · . ˚ ✦ · . ˚ ✦ · . ˚ ✦ · . ˚ ✦
 ```
 
@@ -32,7 +32,15 @@ el nombre es por alguien especial.
 # arch / endeavouros / manjaro
 sudo pacman -S mpv yt-dlp python
 
-# dependencias python
+# ubuntu / debian / mint
+sudo apt install mpv python3 python3-pip
+pip install yt-dlp
+
+# fedora
+sudo dnf install mpv python3 python3-pip
+pip install yt-dlp
+
+# cualquier distro
 pip install requests beautifulsoup4 rich click lxml
 ```
 
@@ -66,7 +74,21 @@ python3 -m akari.main buscar "attack on titan"
 
 ---
 
-## estado
+## compatibilidad
+
+funciona en cualquier distro de linux con python 3.8+ y mpv instalado.
+
+| distro | estado |
+|--------|--------|
+| arch / endeavouros / manjaro | ✅ |
+| ubuntu / debian / mint | ✅ |
+| fedora | ✅ |
+| opensuse | ✅ |
+| otras | debería funcionar |
+
+---
+
+## estado fuentes
 
 | fuente | búsqueda | episodios | video |
 |--------|----------|-----------|-------|

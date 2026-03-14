@@ -51,11 +51,8 @@ def mostrar_resultados(resultados):
 
 def seleccionar_anime(resultados):
     mostrar_resultados(resultados)
-    console.print(f"[{C_GRIS}]  [0] Volver[/]")
     while True:
         eleccion = Prompt.ask(f"[{C_LAVANDA}]  ✧ Elige un número[/]", default="1")
-        if eleccion.strip() == "0" or eleccion.strip() == "":
-            return None
         try:
             idx = int(eleccion) - 1
             if 0 <= idx < len(resultados):
@@ -225,7 +222,7 @@ def mostrar_historial(historial):
 def mostrar_favoritos(favoritos):
     if not favoritos:
         console.print(f"\n[{C_ROSA}]  🕊️  No tienes favoritos aún...[/]\n")
-        return None, None
+        return
 
     console.print()
     separador()
@@ -247,26 +244,7 @@ def mostrar_favoritos(favoritos):
         table.add_row(str(i), fav["titulo"], fav["fuente"], fecha)
 
     console.print(Align.center(table))
-    console.print(f"[{C_GRIS}]  [número] Ver anime   [d+número] Eliminar   [Enter] Volver[/]\n")
-
-    eleccion = console.input(f"[{C_LAVANDA}]  ✧ Opción: [/]").strip().lower()
-    if not eleccion:
-        return None, None
-    if eleccion.startswith("d"):
-        try:
-            idx = int(eleccion[1:]) - 1
-            if 0 <= idx < len(favoritos):
-                return "eliminar", favoritos[idx]
-        except ValueError:
-            pass
-    else:
-        try:
-            idx = int(eleccion) - 1
-            if 0 <= idx < len(favoritos):
-                return "ver", favoritos[idx]
-        except ValueError:
-            pass
-    return None, None
+    console.print()
 
 
 def seleccionar_genero(generos):

@@ -17,7 +17,7 @@ from akari.scrapers import (
 from akari.catalogo import CATALOGO, GENEROS_CATALOGO
 from akari.historial import (
     init_db, guardar_episodio, obtener_historial,
-    obtener_progreso, obtener_favoritos, agregar_favorito, eliminar_favorito
+    obtener_progreso, obtener_favoritos, agregar_favorito
 )
 from akari.logger import info, error, reproduccion, busqueda
 from akari.player import (
@@ -42,8 +42,6 @@ def flujo_busqueda():
         return
 
     anime = seleccionar_anime(resultados)
-    if anime is None:
-        return
     flujo_ver_anime(anime)
 
 
@@ -307,24 +305,9 @@ def cli(ctx):
                 historial = obtener_historial(5)
 
             elif opcion == "f":
-                while True:
-                    favs = obtener_favoritos()
-                    accion, fav = mostrar_favoritos(favs)
-                    if accion == "eliminar" and fav:
-                        eliminar_favorito(fav["slug"], fav["fuente"])
-                        console.print(f"[{C_VERDE}]  ✦ Eliminado de favoritos[/]")
-                    elif accion == "ver" and fav:
-                        anime = {
-                            "titulo": fav["titulo"],
-                            "slug": fav["slug"],
-                            "fuente": fav["fuente"],
-                            "portada": fav.get("portada"),
-                            "tipo": "Anime",
-                        }
-                        flujo_ver_anime(anime)
-                        break
-                    else:
-                        break
+                favs = obtener_favoritos()
+                mostrar_favoritos(favs)
+                console.input(f"[{C_LAVANDA}]  Presiona Enter para volver...[/]")
 
             elif opcion == "h":
                 hist = obtener_historial(20)

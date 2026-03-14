@@ -6,7 +6,7 @@
     ██╔══██║██╔═██╗ ██╔══██║██╔══██╗██║
     ██║  ██║██║  ██╗██║  ██║██║  ██║██║
     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝
-          ✧  ア カ リ  ✧  1.4.2
+          ✧  ア カ リ  ✧  1.3.1
       ✦ · . ˚ ✦ · . ˚ ✦ · . ˚ ✦ · . ˚ ✦ · . ˚ ✦
 ```
 
@@ -101,8 +101,7 @@ funciona en cualquier distro de linux con python 3.8+ y mpv instalado.
 ## roadmap
 
 - [ ] más fuentes de anime en español
-- [ ] portadas en terminal con chafa
-- [ ] guardar progreso de reproducción (minuto exacto)
+- [ ] explorar por género
 - [ ] notificaciones de nuevos episodios
 - [ ] `akari update` para actualizar automáticamente
 
@@ -112,7 +111,7 @@ funciona en cualquier distro de linux con python 3.8+ y mpv instalado.
 
 akari es y será siempre gratuito. si te gusta y quieres apoyar el desarrollo (café, ramen, etc.) puedes donar en ko-fi — es completamente voluntario y no da ninguna ventaja ni acceso especial.
 
-[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/akuumi)
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/)
 
 ---
 

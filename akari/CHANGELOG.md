@@ -1,8 +1,3 @@
-## 1.4.2
-- opción [0] para volver desde resultados de búsqueda
-- eliminar favoritos con [d+número] desde el menú de favoritos
-- ver anime directo desde favoritos
-
 ## 1.4.1
 - autoplay solo cuando mpv termina el video naturalmente, no al cerrar con q
 - fix chafa — portadas ASCII ahora se muestran correctamente

@@ -1,11 +1,18 @@
 import json
+import sys
+import os
 from datetime import datetime
 from pathlib import Path
 
-LOG_PATH = Path.home() / ".config" / "akari" / "akari.log"
+if sys.platform == "win32":
+    BASE_DIR = Path(os.environ.get("APPDATA", Path.home())) / "akari"
+else:
+    BASE_DIR = Path.home() / ".config" / "akari"
+
+LOG_PATH = BASE_DIR / "akari.log"
 
 def _escribir(nivel, mensaje):
-    LOG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    BASE_DIR.mkdir(parents=True, exist_ok=True)
     entrada = {
         "fecha": datetime.now().isoformat(),
         "nivel": nivel,

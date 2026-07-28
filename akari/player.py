@@ -1,9 +1,10 @@
 import subprocess
 import shutil
 import sys
-import re
 import os
-
+import re
+import urllib.request
+import tempfile
 
 def detectar_reproductor():
     for player in ["mpv", "vlc", "cvlc"]:
@@ -11,16 +12,13 @@ def detectar_reproductor():
             return player
     return None
 
-
 def es_termux():
     return "com.termux" in os.environ.get("PREFIX", "")
-
 
 def _segundos_a_str(seg):
     m = seg // 60
     s = seg % 60
     return f"{m:02d}:{s:02d}"
-
 
 def reproducir_termux(url, referer=None):
     cmd = [
@@ -33,7 +31,6 @@ def reproducir_termux(url, referer=None):
         return True
     except Exception:
         return False
-
 
 def reproducir(url, titulo="Akari", episodio=1, player=None, referer=None, desde_segundo=0):
     if es_termux():
@@ -72,7 +69,6 @@ def reproducir(url, titulo="Akari", episodio=1, player=None, referer=None, desde
         print(f"[akari] Error: '{player}' no encontrado.")
         sys.exit(1)
 
-
 def reproducir_y_verificar(url, titulo="Akari", episodio=1, player=None, referer=None, desde_segundo=0):
     if es_termux():
         ok = reproducir_termux(url, referer)
@@ -87,9 +83,9 @@ def reproducir_y_verificar(url, titulo="Akari", episodio=1, player=None, referer
         return False, None, 0, False
 
     titulo_completo = f"{titulo} — Episodio {episodio}"
-
     url_final = url
     es_directo = ".m3u8" in url or "okcdn.ru" in url or "/cdn" in url
+
     if not es_directo and shutil.which("yt-dlp"):
         try:
             cmd = ["yt-dlp", "--get-url", "--no-warnings", "-q", url]
@@ -97,7 +93,7 @@ def reproducir_y_verificar(url, titulo="Akari", episodio=1, player=None, referer
                 cmd += ["--add-header", f"Referer:{referer}"]
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=20)
             if result.returncode == 0 and result.stdout.strip():
-                extracted = result.stdout.strip().split("\n")[0]
+                extracted = result.stdout.strip().splitlines()[0].strip()
                 if extracted and not extracted.startswith("data:") and len(extracted) < 2000:
                     url_final = extracted
                 else:
@@ -126,7 +122,6 @@ def reproducir_y_verificar(url, titulo="Akari", episodio=1, player=None, referer
 
     try:
         result = subprocess.run(cmd, capture_output=True, text=True)
-        # returncode 0 = terminó naturalmente, 4 = usuario cerró con q
         ok = result.returncode in (0, 4)
         termino_solo = result.returncode == 0
         if ok and result.stdout:
@@ -139,19 +134,19 @@ def reproducir_y_verificar(url, titulo="Akari", episodio=1, player=None, referer
     except Exception:
         return False, None, 0, False
 
-
 def mostrar_portada_ascii(url_imagen):
     if not shutil.which("chafa"):
         return
     try:
-        import urllib.request
-        import tempfile
-        import os
         tmp = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
         tmp_path = tmp.name
         tmp.close()
         urllib.request.urlretrieve(url_imagen, tmp_path)
         subprocess.run(["chafa", "--size=20x28", tmp_path], stderr=subprocess.DEVNULL)
-        os.unlink(tmp_path)
+        os.remove(tmp_path)
     except Exception:
-        pass
+        if 'tmp_path' in locals() and os.path.exists(tmp_path):
+            try:
+                os.remove(tmp_path)
+            except Exception:
+                pass

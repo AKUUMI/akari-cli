@@ -1,32 +1,33 @@
+import sys
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel
 from rich.text import Text
 from rich.prompt import Prompt
-from rich.columns import Columns
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 from rich.align import Align
 from rich import box
 import time
 
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding='utf-8')
+
 console = Console()
 
-C_LAVANDA  = "color(183)"
-C_ROSA     = "color(219)"
-C_DORADO   = "color(220)"
+C_LAVANDA  = "#d8b4e2"
+C_ROSA     = "#ffb3ba"
+C_DORADO   = "#ffcc66"
 C_BLANCO   = "bold white"
-C_GRIS     = "color(245)"
-C_VERDE    = "color(157)"
-C_AZUL     = "color(153)"
-
+C_GRIS     = "#b3b3b3"
+C_VERDE    = "#b3e6b3"
+C_AZUL     = "#b3d9ff"
 
 def separador():
     console.print(f"[{C_LAVANDA}]  ✦ · . ˚ ✦ · . ˚ ✦ · . ˚ ✦ · . ˚ ✦ · . ˚ ✦[/]", justify="center")
 
-
 def mostrar_resultados(resultados):
     if not resultados:
-        console.print(f"\n[{C_ROSA}]  🕊️  No se encontraron resultados...[/]\n")
+        console.print(f"\n[{C_ROSA}]  🌸  No se encontraron resultados...[/]\n")
         return
 
     table = Table(
@@ -48,7 +49,6 @@ def mostrar_resultados(resultados):
     console.print(Align.center(table))
     console.print()
 
-
 def seleccionar_anime(resultados):
     mostrar_resultados(resultados)
     console.print(f"[{C_GRIS}]  [0] Volver[/]")
@@ -63,7 +63,6 @@ def seleccionar_anime(resultados):
         except ValueError:
             pass
         console.print(f"[{C_ROSA}]  Por favor elige un número válido[/]")
-
 
 def mostrar_info_anime(info, titulo):
     if not info:
@@ -100,7 +99,6 @@ def mostrar_info_anime(info, titulo):
     console.print(Align.center(panel))
     console.print()
 
-
 def seleccionar_idioma():
     console.print()
     panel = Panel(
@@ -110,7 +108,7 @@ def seleccionar_idioma():
             ("  3  ", f"bold {C_DORADO}"), ("Doblaje en Español Latino\n", C_BLANCO),
             ("  4  ", f"bold {C_DORADO}"), ("Doblaje en Español de España", C_BLANCO),
         ),
-        title=f"[{C_LAVANDA}]🕊️  Elige tu idioma[/]",
+        title=f"[{C_LAVANDA}]🎀  Elige tu idioma[/]",
         border_style=C_LAVANDA,
         padding=(1, 4),
     )
@@ -130,7 +128,6 @@ def seleccionar_idioma():
             console.print(f"\n[{C_VERDE}]  ✦ Seleccionado: {tipo} — Español {region}[/]\n")
             return tipo, region
         console.print(f"[{C_ROSA}]  Opción inválida, elige 1-4[/]")
-
 
 def seleccionar_episodio(episodios, anime_titulo, progreso_anterior=None):
     console.print()
@@ -167,7 +164,6 @@ def seleccionar_episodio(episodios, anime_titulo, progreso_anterior=None):
             pass
         console.print(f"[{C_ROSA}]  Episodio inválido. Rango: 1–{max(episodios)}[/]")
 
-
 def cuenta_regresiva_autoplay(segundos=5):
     console.print()
     for i in range(segundos, 0, -1):
@@ -179,10 +175,9 @@ def cuenta_regresiva_autoplay(segundos=5):
     console.print(" " * 55, end="\r")
     return True
 
-
 def mostrar_historial(historial):
     if not historial:
-        console.print(f"\n[{C_ROSA}]  🕊️  Tu historial está vacío...[/]\n")
+        console.print(f"\n[{C_ROSA}]  🌸  Tu historial está vacío...[/]\n")
         return
 
     console.print()
@@ -221,10 +216,9 @@ def mostrar_historial(historial):
     console.print(Align.center(table))
     console.print()
 
-
 def mostrar_favoritos(favoritos):
     if not favoritos:
-        console.print(f"\n[{C_ROSA}]  🕊️  No tienes favoritos aún...[/]\n")
+        console.print(f"\n[{C_ROSA}]  🌸  No tienes favoritos aún...[/]\n")
         return None, None
 
     console.print()
@@ -268,7 +262,6 @@ def mostrar_favoritos(favoritos):
             pass
     return None, None
 
-
 def seleccionar_genero(generos):
     console.print()
     table = Table(
@@ -305,14 +298,12 @@ def seleccionar_genero(generos):
             pass
         console.print(f"[{C_ROSA}]  Número inválido[/]")
 
-
 def spinner(mensaje="Buscando"):
     return Progress(
         SpinnerColumn(style=C_LAVANDA),
         TextColumn(f"[{C_ROSA}]{mensaje}...[/]"),
         transient=True,
     )
-
 
 def barra_carga(mensaje="Cargando"):
     return Progress(
@@ -321,7 +312,6 @@ def barra_carga(mensaje="Cargando"):
         BarColumn(bar_width=30, style=C_LAVANDA, complete_style=C_DORADO),
         transient=True,
     )
-
 
 def menu_principal(tiene_historial=False):
     console.print()
@@ -361,7 +351,6 @@ def menu_principal(tiene_historial=False):
         )
         return eleccion
 
-
 def mostrar_catalogo_genero(animes, genero, pagina, total_paginas):
     import shutil
     from akari.player import mostrar_portada_ascii
@@ -385,7 +374,6 @@ def mostrar_catalogo_genero(animes, genero, pagina, total_paginas):
     nav.append(f"[{C_DORADO}][q][/] volver")
     console.print("  " + "   ".join(nav))
     console.print()
-
 
 def seleccionar_genero_catalogo(generos):
     console.print()

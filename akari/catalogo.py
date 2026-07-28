@@ -1,0 +1,2 @@
+CATALOGO = {}
+GENEROS_CATALOGO = []

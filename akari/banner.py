@@ -1,40 +1,27 @@
-from rich.text import Text
+import sys
+from rich.console import Console
 from rich.align import Align
-from akari import __version__
 
-AKARI_ASCII = """\
-      ✦ · . ˚ ✦ · . ˚ ✦ · . ˚ ✦ · . ˚ ✦ · . ˚ ✦
-    ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-     █████╗ ██╗  ██╗ █████╗ ██████╗ ██╗
-    ██╔══██╗██║ ██╔╝██╔══██╗██╔══██╗██║
-    ███████║█████╔╝ ███████║██████╔╝██║
-    ██╔══██║██╔═██╗ ██╔══██║██╔══██╗██║
-    ██║  ██║██║  ██╗██║  ██║██║  ██║██║
-    ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝
-    ░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░
-          ✧  ア カ リ  ✧   tu cliente de anime 🕊️
+from akari import __version__ 
+
+
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding='utf-8')
+
+AKARI_MOE = f"""\
+[bold #ffb3ba]✧･ﾟ: *✧･ﾟ:*  ♡ (ﾉ◕ヮ◕)ﾉ*:･ﾟ✧  ♡  *:･ﾟ✧*:･ﾟ✧[/]
+[bold #ff99cc]
+      █████╗ ██╗  ██╗ █████╗ ██████╗ ██╗
+     ██╔══██╗██║ ██╔╝██╔══██╗██╔══██╗██║
+     ███████║█████╔╝ ███████║██████╔╝██║
+     ██╔══██║██╔═██╗ ██╔══██║██╔══██╗██║
+     ██║  ██║██║  ██╗██║  ██║██║  ██║██║
+     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝[/]
+[bold #ffb3ba]✧･ﾟ: *✧･ﾟ:*  ♡ ૮ ˶ᵔ ᵕ ᵔ˶ ა ♡  *:･ﾟ✧*:･ﾟ✧[/]
+
+       [bold #ff66b2]🌸 ア カ リ 🌸[/]   [italic #ffcce6]Tu rinconcito de anime[/]
+               [bold #ffb3ba]v{__version__}[/]
 """
 
-def show_banner(console):
-    lines = AKARI_ASCII.split("\n")
-    styled = Text()
-    for line in lines:
-        if "✦" in line or "˚" in line:
-            styled.append(line + "\n", style="bold color(183)")
-        elif "░" in line:
-            styled.append(line + "\n", style="color(225)")
-        elif any(c in line for c in "█╗╝║╔╚"):
-            styled.append(line + "\n", style="bold color(255)")
-        elif "ア カ リ" in line or "✧" in line:
-            styled.append(line + "\n", style="bold color(220)")
-        elif "🕊️" in line:
-            styled.append(line + "\n", style="italic color(219)")
-        else:
-            styled.append(line + "\n", style="color(255)")
-
-    version_line = Text(f"          v{__version__}\n", style="color(183)")
-    sep_line = Text("      ✦ · . ˚ ✦ · . ˚ ✦ · . ˚ ✦ · . ˚ ✦ · . ˚ ✦\n", style="bold color(183)")
-    styled.append_text(version_line)
-    styled.append_text(sep_line)
-
-    console.print(Align.center(styled))
+def show_banner(console: Console):
+    console.print(Align.center(AKARI_MOE))

@@ -1,6 +1,7 @@
 import subprocess
 import click
 import sys
+import os
 import threading
 
 from akari.banner import show_banner
@@ -27,7 +28,6 @@ from akari.player import (
 
 init_db()
 
-
 def flujo_busqueda():
     query = console.input(f"[{C_LAVANDA}]  ✧ Buscar anime: [/]").strip()
     if not query:
@@ -38,7 +38,7 @@ def flujo_busqueda():
 
     busqueda(query, len(resultados))
     if not resultados:
-        console.print(f"\n[{C_ROSA}]  🕊️  Sin resultados para '{query}'[/]\n")
+        console.print(f"\n[{C_ROSA}]  🌸  Sin resultados para '{query}'[/]\n")
         return
 
     anime = seleccionar_anime(resultados)
@@ -46,17 +46,13 @@ def flujo_busqueda():
         return
     flujo_ver_anime(anime)
 
-
-
 def flujo_ver_anime(anime):
     separador()
     console.print(f"\n[{C_DORADO}]  ✦ {anime['titulo']}[/]  [{C_LAVANDA}]({anime['fuente']})[/]\n")
 
-    # Mostrar portada ASCII si chafa está instalado
     if anime.get("portada"):
         mostrar_portada_ascii(anime["portada"])
 
-    # Info del anime
     with spinner("Cargando info"):
         info = jkanime_info(anime["slug"])
     mostrar_info_anime(info, anime["titulo"])
@@ -73,7 +69,6 @@ def flujo_ver_anime(anime):
 
     while ep is not None:
         ep = _loop_episodio(anime, ep, episodios)
-
 
 def _loop_episodio(anime, ep, episodios):
     with console.status(f"[{C_LAVANDA}]  ✦ Obteniendo servidores (ep. {ep})...[/]"):
@@ -142,7 +137,6 @@ def _loop_episodio(anime, ep, episodios):
 
     tiene_siguiente = (ep + 1) in episodios
 
-    # Autoplay solo si mpv terminó el video solo (no si el usuario cerró)
     if tiene_siguiente and termino_solo:
         cancelado = [False]
 
@@ -168,7 +162,6 @@ def _loop_episodio(anime, ep, episodios):
         if not cancelado[0]:
             return ep + 1
 
-    # Menú post-reproducción
     while True:
         separador()
         partes = []
@@ -200,18 +193,22 @@ def _loop_episodio(anime, ep, episodios):
                 anime["titulo"], anime["slug"], anime["fuente"], anime.get("portada")
             )
             if agregado:
-                console.print(f"[{C_VERDE}]  ✦ Agregado a favoritos 🕊️[/]")
+                console.print(f"[{C_VERDE}]  ✦ Agregado a favoritos 🎀[/]")
             else:
                 console.print(f"[{C_GRIS}]  Ya está en favoritos.[/]")
 
         elif accion == "u":
-            subprocess.run(["xdg-open", url_reproducida], stderr=subprocess.DEVNULL)
+            if sys.platform == "win32":
+                os.startfile(url_reproducida)
+            elif sys.platform == "darwin":
+                subprocess.run(["open", url_reproducida], stderr=subprocess.DEVNULL)
+            else:
+                subprocess.run(["xdg-open", url_reproducida], stderr=subprocess.DEVNULL)
             console.print(f"[{C_VERDE}]  ✦ Abriendo en navegador...[/]")
             return None
 
         else:
             return None
-
 
 def flujo_catalogo():
     genero = seleccionar_genero_catalogo(GENEROS_CATALOGO)
@@ -221,7 +218,6 @@ def flujo_catalogo():
     pagina = 1
     total_paginas = (len(animes) + POR_PAGINA - 1) // POR_PAGINA
 
-    # Enriquecer con portadas de JKAnime
     with spinner(f"Cargando {genero}"):
         for anime in animes:
             if not anime.get("portada"):
@@ -261,7 +257,6 @@ def flujo_catalogo():
             except ValueError:
                 pass
 
-
 def flujo_continuar(historial):
     mostrar_historial(historial)
     eleccion = console.input(
@@ -283,7 +278,6 @@ def flujo_continuar(historial):
             flujo_ver_anime(anime)
     except (ValueError, IndexError):
         pass
-
 
 @click.group(invoke_without_command=True)
 @click.pass_context
@@ -332,12 +326,14 @@ def cli(ctx):
                 console.input(f"[{C_LAVANDA}]  Presiona Enter para volver...[/]")
 
             elif opcion == "q":
-                console.print(f"\n[{C_LAVANDA}]  ✦ ¡Hasta pronto! 🕊️[/]\n")
+                console.print(f"\n[{C_LAVANDA}]  ✦ ¡Hasta pronto! ✨[/]\n")
                 separador()
                 info("sesion terminada")
-                subprocess.run(["clear"])
+                if sys.platform == "win32":
+                    subprocess.run(["cls"], shell=True)
+                else:
+                    subprocess.run(["clear"])
                 sys.exit(0)
-
 
 @cli.command()
 @click.argument("query", nargs=-1)
@@ -354,20 +350,17 @@ def buscar(query):
     else:
         console.print(f"[{C_ROSA}]  Sin resultados para '{q}'[/]")
 
-
 @cli.command()
 def historial():
     show_banner(console)
     hist = obtener_historial(20)
     mostrar_historial(hist)
 
-
 @cli.command()
 def favoritos():
     show_banner(console)
     favs = obtener_favoritos()
     mostrar_favoritos(favs)
-
 
 if __name__ == "__main__":
     cli()

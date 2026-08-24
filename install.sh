@@ -38,7 +38,11 @@ step()    { echo -e "\n${BOLD}${LAVANDA}  ── ${1} ──${RESET}\n"; }
 
 # ── Detectar distro ───────────────────────────────────────────────
 detect_distro() {
-    if [ -f /etc/os-release ]; then
+    if [[ "${PREFIX:-}" == *"com.termux"* ]]; then
+        DISTRO_ID="termux"
+        DISTRO_LIKE="android"
+        DISTRO_NAME="Termux"
+    elif [ -f /etc/os-release ]; then
         . /etc/os-release
         DISTRO_ID="${ID}"
         DISTRO_LIKE="${ID_LIKE:-}"
@@ -54,7 +58,9 @@ detect_distro() {
 
 # ── Detectar gestor de paquetes ───────────────────────────────────
 detect_pkg_manager() {
-    if command -v pacman &>/dev/null; then
+    if [ "${DISTRO_ID}" = "termux" ]; then
+        PKG="termux"
+    elif command -v pacman &>/dev/null; then
         PKG="pacman"
     elif command -v apt-get &>/dev/null; then
         PKG="apt"
@@ -79,8 +85,12 @@ install_system_deps() {
     info "Distro detectada: ${DISTRO_NAME} (gestor: ${PKG})"
 
     case "$PKG" in
+        termux)
+            pkg update -y
+            pkg install -y python git ffmpeg chafa
+            ;;
         pacman)
-            sudo pacman -Sy --noconfirm --needed mpv python python-pip python-virtualenv git ffmpeg chafa
+            sudo pacman -S --noconfirm --needed mpv python python-pip python-virtualenv git ffmpeg chafa
             ;;
         apt)
             sudo apt-get update -qq
@@ -106,13 +116,12 @@ install_system_deps() {
     ok "Dependencias instaladas (incluyendo chafa 🎀)"
 }
 
-# ── Verificar Python 3.8+ ─────────────────────────────────────────
 check_python() {
     step "Verificando Python"
     PYTHON_BIN=""
     for py in python3 python; do
         if command -v "$py" &>/dev/null; then
-            VER=$($py -c "import sys; print(sys.version_info >= (3,8))" 2>/dev/null)
+            VER=$($py -c "import sys; print(sys.version_info >= (3,10))" 2>/dev/null)
             if [ "$VER" = "True" ]; then
                 PYTHON_BIN="$py"
                 PY_VERSION=$($py --version)
@@ -121,7 +130,7 @@ check_python() {
             fi
         fi
     done
-    [ -z "$PYTHON_BIN" ] && error "Se requiere Python 3.8 o superior."
+    [ -z "$PYTHON_BIN" ] && error "Se requiere Python 3.10 o superior."
 }
 
 # ── Configurar entorno virtual ────────────────────────────────────

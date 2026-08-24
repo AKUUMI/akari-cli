@@ -5,7 +5,7 @@ from rich.align import Align
 from akari import __version__ 
 
 
-if sys.platform == "win32":
+if sys.platform == "win32" and hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding='utf-8')
 
 AKARI_MOE = f"""\

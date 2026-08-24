@@ -101,7 +101,7 @@ def reproducir_y_verificar(url, titulo="Akari", episodio=1, player=None, referer
             else:
                 return False, None, 0, False
         except Exception:
-            return False, None, 0
+            return False, None, 0, False
 
     minuto_final = 0
 

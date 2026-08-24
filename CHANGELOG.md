@@ -1,5 +1,17 @@
 # changelog
 
+## 1.6.0
+- búsqueda ordenada por relevancia y filtrado de enlaces de navegación como `Notificaciones`
+- fuentes caídas o comprometidas desactivadas sin retrasar el resto de la búsqueda
+- selectores y episodios actualizados para JKAnime, AnimeFLV, TioAnime y MonosChinos
+- AnimeFLV desactivado mientras sus páginas devuelvan episodios sin servidores
+- fichas, portadas y encabezados de reproducción específicos para cada fuente
+- instalación directa en Termux y requisito unificado de Python 3.10+
+- `yt-dlp` incluido como dependencia y salida UTF-8 compatible con más terminales de Windows
+- carga concurrente de portadas del catálogo
+- corrección del retorno incompleto al fallar `yt-dlp`
+- pruebas automáticas para Windows, Linux y macOS
+
 ## 1.5.0
 - soporte total para Windows:
   - migración de rutas de configuración y logs a `%APPDATA%`

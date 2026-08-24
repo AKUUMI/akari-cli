@@ -3,6 +3,7 @@ import click
 import sys
 import os
 import threading
+import concurrent.futures
 
 from akari.banner import show_banner
 from akari.ui import (
@@ -13,7 +14,7 @@ from akari.ui import (
     C_LAVANDA, C_ROSA, C_DORADO, C_VERDE, C_GRIS
 )
 from akari.scrapers import (
-    buscar_en_todas, obtener_episodios, obtener_video, jkanime_info
+    buscar_en_todas, obtener_episodios, obtener_video, obtener_info, obtener_referer
 )
 from akari.catalogo import CATALOGO, GENEROS_CATALOGO
 from akari.historial import (
@@ -33,7 +34,7 @@ def flujo_busqueda():
     if not query:
         return
 
-    with spinner("Buscando en JKAnime"):
+    with spinner("Buscando en todas las fuentes"):
         resultados = buscar_en_todas(query)
 
     busqueda(query, len(resultados))
@@ -54,7 +55,7 @@ def flujo_ver_anime(anime):
         mostrar_portada_ascii(anime["portada"])
 
     with spinner("Cargando info"):
-        info = jkanime_info(anime["slug"])
+        info = obtener_info(anime["slug"], anime["fuente"])
     mostrar_info_anime(info, anime["titulo"])
 
     with spinner("Cargando episodios"):
@@ -85,7 +86,7 @@ def _loop_episodio(anime, ep, episodios):
         console.print(f"[{C_GRIS}]  mpv \"{servidores[0]['url']}\" --referrer=\"https://jkanime.net/\"[/]")
         return None
 
-    referer = "https://jkanime.net/"
+    referer = obtener_referer(anime["fuente"])
 
     progreso = obtener_progreso(anime["slug"], anime["fuente"])
     desde_segundo = 0
@@ -219,12 +220,16 @@ def flujo_catalogo():
     total_paginas = (len(animes) + POR_PAGINA - 1) // POR_PAGINA
 
     with spinner(f"Cargando {genero}"):
-        for anime in animes:
-            if not anime.get("portada"):
-                from akari.scrapers import jkanime_info
-                info = jkanime_info(anime["slug"])
-                if info.get("portada"):
-                    anime["portada"] = info["portada"]
+        pendientes = [anime for anime in animes if not anime.get("portada")]
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(8, len(pendientes) or 1)) as executor:
+            futuros = {executor.submit(obtener_info, anime["slug"], "JKAnime"): anime for anime in pendientes}
+            for futuro in concurrent.futures.as_completed(futuros):
+                try:
+                    portada = futuro.result().get("portada")
+                    if portada:
+                        futuros[futuro]["portada"] = portada
+                except Exception:
+                    pass
 
     while True:
         inicio = (pagina - 1) * POR_PAGINA
@@ -346,7 +351,8 @@ def buscar(query):
         resultados = buscar_en_todas(q)
     if resultados:
         anime = seleccionar_anime(resultados)
-        flujo_ver_anime(anime)
+        if anime is not None:
+            flujo_ver_anime(anime)
     else:
         console.print(f"[{C_ROSA}]  Sin resultados para '{q}'[/]")
 

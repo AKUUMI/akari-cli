@@ -1,7 +1,9 @@
 import requests
 import re
 import json
+import base64
 import concurrent.futures
+from urllib.parse import urlparse
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
@@ -13,7 +15,14 @@ URL_ANIMEFLV = "https://www4.animeflv.net"
 URL_TIOANIME = "https://tioanime.com"
 URL_ANIMEFENIX = "https://animefenix.tv"
 URL_ANIMEID = "https://www.animeid.tv"
-URL_MONOSCHINOS = "https://monoschinos2.com"
+URL_MONOSCHINOS = "https://monoschinos.st"
+
+RESULTADOS_INVALIDOS = {
+    "notificaciones", "notificacion", "directorio", "horario", "comunidad",
+    "top", "estrenos", "aplicacion", "historial", "guardado", "buscar",
+    "categoria", "genero", "temporada", "usuario", "salir", "login",
+    "registro", "perfil", "inicio",
+}
 
 def _extraer_json_balanceado(texto, patron_inicio, bracket="{"):
     cierre = "}" if bracket == "{" else "]"
@@ -52,19 +61,56 @@ def _extraer_json_balanceado(texto, patron_inicio, bracket="{"):
             return texto[start:i + 1]
     return None
 
-def _safe_get(url, extra_headers=None, timeout=15):
+def _safe_get(url, extra_headers=None, timeout=8):
     try:
         h = {**HEADERS}
         if extra_headers:
             h.update(extra_headers)
         r = requests.get(url, headers=h, timeout=timeout)
         r.raise_for_status()
+        origen = (urlparse(url).hostname or "").removeprefix("www.")
+        destino = (urlparse(r.url).hostname or "").removeprefix("www.")
+        if origen != destino:
+            return None
         return r
     except Exception:
         return None
 
 def _slugify(texto):
     return re.sub(r'[^\w\s-]', '', texto).strip().replace(' ', '-').lower()
+
+def _normalizar(texto):
+    return re.sub(r'[^a-z0-9]+', ' ', texto.lower()).strip()
+
+def _episodios_desde_javascript(texto):
+    bloque = _extraer_json_balanceado(texto, r"var\s+episodes\s*=", "[")
+    if not bloque:
+        return []
+    try:
+        datos = json.loads(bloque)
+        numeros = []
+        for item in datos:
+            valor = item[0] if isinstance(item, list) and item else item
+            if isinstance(valor, int) or isinstance(valor, str) and valor.isdigit():
+                numeros.append(int(valor))
+        return sorted(set(numeros))
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return []
+
+def _videos_desde_javascript(texto):
+    match = re.search(r"var\s+videos\s*=\s*", texto)
+    if not match:
+        return []
+    restante = texto[match.end():].lstrip()
+    if not restante or restante[0] not in "[{":
+        return []
+    bloque = _extraer_json_balanceado(texto, r"var\s+videos\s*=", restante[0])
+    if not bloque:
+        return []
+    try:
+        return json.loads(bloque)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return []
 
 def jkanime_buscar(query):
     from urllib.parse import quote
@@ -75,11 +121,7 @@ def jkanime_buscar(query):
     try:
         from bs4 import BeautifulSoup
         soup = BeautifulSoup(r.text, "html.parser")
-        ignorar = {
-            "directorio", "horario", "comunidad", "top", "estrenos",
-            "aplicacion", "historial", "guardado", "dash", "buscar",
-            "categoria", "genero", "temporada", "usuario", "salir",
-        }
+        ignorar = RESULTADOS_INVALIDOS | {"dash"}
         vistos = set()
         resultados = []
         for a in soup.select(f'a[href^="{URL_JKANIME}/"], a[href^="/"]'):
@@ -350,7 +392,7 @@ def animeflv_episodios(slug):
             ep_num = ep.get("href", "").split("-")[-1]
             if ep_num.isdigit():
                 episodios.append(int(ep_num))
-        return sorted(set(episodios)) if episodios else []
+        return sorted(set(episodios)) if episodios else _episodios_desde_javascript(r.text)
     except Exception:
         return []
 
@@ -361,6 +403,19 @@ def animeflv_get_video_url(slug, episodio):
         return []
     try:
         servidores = []
+        videos = _videos_desde_javascript(r.text)
+        if isinstance(videos, dict):
+            for idioma, opciones in videos.items():
+                for opcion in opciones if isinstance(opciones, list) else []:
+                    video_url = opcion.get("code") if isinstance(opcion, dict) else None
+                    if video_url:
+                        servidores.append({
+                            "servidor": opcion.get("title") or "Servidor",
+                            "url": video_url,
+                            "idioma": idioma,
+                            "lang_key": idioma,
+                            "es_stream": ".m3u8" in video_url,
+                        })
         server_matches = re.findall(
             r'<button[^>]*data-server="([^"]*)"[^>]*>([^<]*)</button>',
             r.text
@@ -468,7 +523,7 @@ def tioanime_episodios(slug):
             ep_num = ep.get("href", "").split("-")[-1]
             if ep_num.isdigit():
                 episodios.append(int(ep_num))
-        return sorted(set(episodios)) if episodios else []
+        return sorted(set(episodios)) if episodios else _episodios_desde_javascript(r.text)
     except Exception:
         return []
 
@@ -479,6 +534,19 @@ def tioanime_get_video_url(slug, episodio):
         return []
     try:
         servidores = []
+        videos = _videos_desde_javascript(r.text)
+        if isinstance(videos, list):
+            for opcion in videos:
+                if not isinstance(opcion, list) or len(opcion) < 2 or not opcion[1]:
+                    continue
+                idioma = "DUB Latino" if len(opcion) > 3 and opcion[3] else "SUB Latino"
+                servidores.append({
+                    "servidor": str(opcion[0]) or "Servidor",
+                    "url": opcion[1],
+                    "idioma": idioma,
+                    "lang_key": "DUB" if len(opcion) > 3 and opcion[3] else "SUB",
+                    "es_stream": ".m3u8" in opcion[1],
+                })
         iframe_matches = re.findall(
             r'<iframe[^>]*src=["\']([^"\']+)["\'][^>]*>',
             r.text
@@ -544,7 +612,8 @@ def animefenix_info(slug):
         from bs4 import BeautifulSoup
         soup = BeautifulSoup(r.text, "html.parser")
         sinopsis_tag = soup.select_one("div.sinopsis p, div.description p")
-        sinopsis = sinopsis_tag.text.strip() if sinopsis_tag else None
+        descripcion_meta = soup.select_one('meta[name="description"]')
+        sinopsis = sinopsis_tag.text.strip() if sinopsis_tag else descripcion_meta.get("content") if descripcion_meta else None
         estado = None
         tipo = None
         generos = []
@@ -683,7 +752,8 @@ def animeid_info(slug):
         for g in soup.select("a[href*='/genero/']"):
             generos.append(g.text.strip())
         portada_tag = soup.select_one("img.poster, div.poster img")
-        portada = portada_tag.get("src") if portada_tag else None
+        portada_meta = soup.select_one('meta[property="og:image"]')
+        portada = portada_tag.get("src") if portada_tag else portada_meta.get("content") if portada_meta else None
         return {
             "sinopsis": sinopsis,
             "estado": estado,
@@ -773,21 +843,34 @@ def monoschinos_buscar(query):
         from bs4 import BeautifulSoup
         soup = BeautifulSoup(r.text, "html.parser")
         resultados = []
-        for item in soup.select("div.anime-item, article.anime, div.serie"):
-            title_tag = item.select_one("h3 a, h2 a, .title")
+        vistos = set()
+        for link_tag in soup.select('a[href*="/anime/"]'):
+            href = link_tag.get("href", "").strip()
+            slug = href.rstrip("/").split("/")[-1]
+            if not slug or slug in vistos:
+                continue
+            item = link_tag.find_parent(["article", "li", "div"]) or link_tag
+            title_tag = item.select_one("h1, h2, h3, h4, .title, .titulo")
             img_tag = item.select_one("img")
-            link_tag = item.select_one("a")
-            if title_tag and link_tag:
-                href = link_tag.get("href", "")
-                slug = href.strip("/").split("/")[-1] if href else ""
-                resultados.append({
-                    "titulo": title_tag.text.strip(),
-                    "slug": slug,
-                    "url": href if href.startswith("http") else f"{URL_MONOSCHINOS}{href}",
-                    "portada": img_tag.get("src") if img_tag else None,
-                    "tipo": "Anime",
-                    "fuente": "MonosChinos",
-                })
+            titulo = title_tag.get_text(" ", strip=True) if title_tag else ""
+            if not titulo and img_tag:
+                titulo = (img_tag.get("alt") or img_tag.get("title") or "").strip()
+            if not titulo:
+                titulo = link_tag.get_text(" ", strip=True)
+            if not titulo:
+                continue
+            vistos.add(slug)
+            portada = None
+            if img_tag:
+                portada = img_tag.get("data-src") or img_tag.get("src")
+            resultados.append({
+                "titulo": titulo,
+                "slug": slug,
+                "url": href if href.startswith("http") else f"{URL_MONOSCHINOS}{href}",
+                "portada": portada,
+                "tipo": "Anime",
+                "fuente": "MonosChinos",
+            })
         return resultados
     except Exception:
         return []
@@ -801,7 +884,8 @@ def monoschinos_info(slug):
         from bs4 import BeautifulSoup
         soup = BeautifulSoup(r.text, "html.parser")
         sinopsis_tag = soup.select_one("div.sinopsis p, div.description p")
-        sinopsis = sinopsis_tag.text.strip() if sinopsis_tag else None
+        descripcion_meta = soup.select_one('meta[name="description"]')
+        sinopsis = sinopsis_tag.text.strip() if sinopsis_tag else descripcion_meta.get("content") if descripcion_meta else None
         estado = None
         generos = []
         for item in soup.select("span.status, div.status"):
@@ -811,7 +895,8 @@ def monoschinos_info(slug):
         for g in soup.select("a[href*='/genero/']"):
             generos.append(g.text.strip())
         portada_tag = soup.select_one("img.poster, div.poster img")
-        portada = portada_tag.get("src") if portada_tag else None
+        portada_meta = soup.select_one('meta[property="og:image"]')
+        portada = portada_tag.get("src") if portada_tag else portada_meta.get("content") if portada_meta else None
         return {
             "sinopsis": sinopsis,
             "estado": estado,
@@ -823,34 +908,65 @@ def monoschinos_info(slug):
     except Exception:
         return {}
 
-def monoschinos_episodios(slug):
-    url = f"{URL_MONOSCHINOS}/anime/{slug}"
-    r = _safe_get(url)
+def _monoschinos_datos_episodios(slug):
+    pagina = f"{URL_MONOSCHINOS}/anime/{slug}"
+    r = _safe_get(pagina)
     if not r:
-        return []
+        return None
     try:
         from bs4 import BeautifulSoup
-        soup = BeautifulSoup(r.text, "html.parser")
-        episodios = []
-        for ep in soup.select("ul.episode-list li a, div.episode a"):
-            ep_num = ep.get_text(strip=True)
-            if ep_num.isdigit():
-                episodios.append(int(ep_num))
-            else:
-                m = re.search(r'(\d+)', ep_num)
-                if m:
-                    episodios.append(int(m.group(1)))
-        return sorted(set(episodios)) if episodios else []
-    except Exception:
-        return []
+        contenedor = BeautifulSoup(r.text, "html.parser").select_one(".caplist[data-ajax]")
+        if not contenedor:
+            return None
+        ajax = contenedor.get("data-ajax")
+        respuesta = _safe_get(ajax, extra_headers={
+            "Referer": pagina,
+            "X-Requested-With": "XMLHttpRequest",
+        })
+        return respuesta.json() if respuesta else None
+    except (TypeError, ValueError):
+        return None
+
+def monoschinos_episodios(slug):
+    datos = _monoschinos_datos_episodios(slug) or {}
+    return sorted({int(item["num"]) for item in datos.get("eps", []) if str(item.get("num", "")).isdigit()})
 
 def monoschinos_get_video_url(slug, episodio):
-    url = f"{URL_MONOSCHINOS}/ver/{slug}-{episodio}"
+    datos = _monoschinos_datos_episodios(slug) or {}
+    url_lista = datos.get("paginate_url")
+    if not url_lista:
+        return []
+    lista = _safe_get(url_lista, extra_headers={
+        "Referer": f"{URL_MONOSCHINOS}/anime/{slug}",
+        "X-Requested-With": "XMLHttpRequest",
+    })
+    if not lista:
+        return []
+    try:
+        caps = lista.json().get("caps", [])
+        url = next(item["url"] for item in caps if int(item.get("episodio", -1)) == int(episodio))
+    except (StopIteration, TypeError, ValueError):
+        return []
     r = _safe_get(url, extra_headers={"Referer": f"{URL_MONOSCHINOS}/"})
     if not r:
         return []
     try:
         servidores = []
+        from bs4 import BeautifulSoup
+        for opcion in BeautifulSoup(r.text, "html.parser").select("[data-player]"):
+            try:
+                video_url = base64.b64decode(opcion.get("data-player")).decode("utf-8")
+            except (TypeError, ValueError, UnicodeDecodeError):
+                continue
+            servidores.append({
+                "servidor": opcion.get_text(" ", strip=True) or "Servidor",
+                "url": video_url,
+                "idioma": "SUB Latino",
+                "lang_key": "SUB",
+                "es_stream": ".m3u8" in video_url,
+            })
+        if servidores:
+            return servidores
         iframe_matches = re.findall(
             r'<iframe[^>]*src=["\']([^"\']+)["\'][^>]*>',
             r.text
@@ -899,29 +1015,11 @@ FUENTES = {
         "video": jkanime_get_video_url,
         "info": jkanime_info,
     },
-    "AnimeFLV": {
-        "buscar": animeflv_buscar,
-        "episodios": animeflv_episodios,
-        "video": animeflv_get_video_url,
-        "info": animeflv_info,
-    },
     "TioAnime": {
         "buscar": tioanime_buscar,
         "episodios": tioanime_episodios,
         "video": tioanime_get_video_url,
         "info": tioanime_info,
-    },
-    "AnimeFenix": {
-        "buscar": animefenix_buscar,
-        "episodios": animefenix_episodios,
-        "video": animefenix_get_video_url,
-        "info": animefenix_info,
-    },
-    "AnimeID": {
-        "buscar": animeid_buscar,
-        "episodios": animeid_episodios,
-        "video": animeid_get_video_url,
-        "info": animeid_info,
     },
     "MonosChinos": {
         "buscar": monoschinos_buscar,
@@ -942,7 +1040,30 @@ def buscar_en_todas(query):
                     resultados.extend(res)
             except Exception:
                 pass
-    return resultados
+    limpios = []
+    vistos = set()
+    for resultado in resultados:
+        titulo = str(resultado.get("titulo") or "").strip()
+        slug = str(resultado.get("slug") or "").strip().lower()
+        if not titulo or not slug:
+            continue
+        if titulo.lower() in RESULTADOS_INVALIDOS or slug in RESULTADOS_INVALIDOS:
+            continue
+        clave = (resultado.get("fuente"), slug)
+        if clave in vistos:
+            continue
+        vistos.add(clave)
+        resultado["titulo"] = titulo
+        limpios.append(resultado)
+    consulta = _normalizar(query)
+    limpios.sort(key=lambda item: (
+        0 if _normalizar(item["titulo"]) == consulta else
+        1 if _normalizar(item["titulo"]).startswith(consulta) else
+        2 if consulta in _normalizar(item["titulo"]) else 3,
+        _normalizar(item["titulo"]),
+        item.get("fuente", ""),
+    ))
+    return limpios
 
 def obtener_episodios(slug, fuente):
     fn = FUENTES.get(fuente, {}).get("episodios", lambda s: [])
@@ -955,3 +1076,11 @@ def obtener_video(slug, episodio, fuente):
 def obtener_info(slug, fuente):
     fn = FUENTES.get(fuente, {}).get("info", lambda s: {})
     return fn(slug)
+
+def obtener_referer(fuente):
+    return {
+        "JKAnime": f"{URL_JKANIME}/",
+        "AnimeFLV": f"{URL_ANIMEFLV}/",
+        "TioAnime": f"{URL_TIOANIME}/",
+        "MonosChinos": f"{URL_MONOSCHINOS}/",
+    }.get(fuente)

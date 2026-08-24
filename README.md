@@ -44,7 +44,7 @@ pip install yt-dlp
 
 **windows:**
 
-🐍 **1. Python 3.8+**
+🐍 **1. Python 3.10+**
 Descargado de [python.org](https://python.org/)
 - IMPORTANTE: marcar ✅ "Add Python to PATH" durante la instalación
 - Verificación: `python --version`
@@ -70,7 +70,7 @@ pip install yt-dlp
 ```
 Y las del proyecto:
 ```powershell
-cd C:\Users\AKU\AKUU\akari-cli
+cd C:\ruta\a\akari-cli
 pip install -e .
 ```
 
@@ -147,10 +147,10 @@ akari realiza búsquedas concurrentes para máxima velocidad ヾ(≧ω≦*)ﾉ.
 |---|---|---|
 | jkanime | (^▽^) estable | subs m3u8 directos |
 | tioanime | (^▽^) estable | subs/doblaje |
-| animefenix | (^▽^) estable | subs/doblaje |
-| animeid | (^▽^) estable | subs/doblaje |
+| animefenix | (×_×) fuera de línea | servidor sin respuesta, desactivado temporalmente |
+| animeid | (×_×) dominio comprometido | redirige fuera del servicio, desactivado por seguridad |
 | monoschinos | (^▽^) estable | enfocado en latino |
-| animeflv | (o_o;) inestable | protecciones cloudflare agresivas |
+| animeflv | (×_×) reproducción no disponible | devuelve episodios sin servidores, desactivado temporalmente |
 
 ---
 

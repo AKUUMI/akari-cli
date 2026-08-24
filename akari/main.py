@@ -24,7 +24,7 @@ from akari.historial import (
 from akari.logger import info, error, reproduccion, busqueda
 from akari.player import (
     reproducir, reproducir_y_verificar, detectar_reproductor,
-    es_termux, mostrar_portada_ascii, descargar_episodio
+    es_termux, mostrar_portada_ascii, descargar_episodio, parsear_episodios
 )
 
 init_db()
@@ -66,13 +66,19 @@ def flujo_ver_anime(anime):
         return
 
     progreso = obtener_progreso(anime["slug"], anime["fuente"])
-    ep = seleccionar_episodio(episodios, anime["titulo"], progreso)
-
-    accion = console.input(
-        f"[{C_LAVANDA}]  [v] Ver  [d] Descargar  [q] Volver [v]: [/]"
-    ).strip().lower() or "v"
+    while True:
+        accion = console.input(
+            f"[{C_LAVANDA}]  [v] Ver  [d] Descargar uno  [m] Descargar varios  [q] Volver [v]: [/]"
+        ).strip().lower() or "v"
+        if accion in {"v", "d", "m", "q"}:
+            break
     if accion == "q":
         return
+    if accion == "m":
+        _descargar_varios(anime, episodios)
+        return
+
+    ep = seleccionar_episodio(episodios, anime["titulo"], progreso)
     if accion == "d":
         _descargar_episodio(anime, ep)
         return
@@ -85,7 +91,7 @@ def _descargar_episodio(anime, ep):
         servidores = obtener_video(anime["slug"], ep, anime["fuente"])
     if not servidores:
         console.print(f"[{C_ROSA}]  No se encontraron servidores para descargar.[/]")
-        return
+        return False
     console.print(f"[{C_LAVANDA}]  Iniciando descarga con yt-dlp...[/]")
     ok, carpeta = descargar_episodio(
         servidores,
@@ -99,6 +105,38 @@ def _descargar_episodio(anime, ep):
         console.print(f"[{C_ROSA}]  Ningún servidor permitió completar la descarga.[/]")
     else:
         console.print(f"[{C_ROSA}]  yt-dlp no está instalado o no se pudo crear la carpeta.[/]")
+    return ok
+
+def _descargar_varios(anime, episodios):
+    console.print(f"[{C_GRIS}]  Escribe un rango o una lista: 1-12, 1,4,8 o 1-5,10-12[/]")
+    while True:
+        seleccion = console.input(f"[{C_LAVANDA}]  Capítulos: [/]").strip()
+        try:
+            elegidos = parsear_episodios(seleccion, episodios)
+            break
+        except (TypeError, ValueError):
+            console.print(f"[{C_ROSA}]  Selección inválida. Disponibles: {min(episodios)}-{max(episodios)}[/]")
+    confirmar = console.input(
+        f"[{C_LAVANDA}]  Se descargarán {len(elegidos)} capítulos. ¿Continuar? [s/N]: [/]"
+    ).strip().lower()
+    if confirmar not in {"s", "si", "sí"}:
+        return
+    completados = 0
+    fallidos = []
+    for indice, episodio in enumerate(elegidos, 1):
+        separador()
+        console.print(f"[{C_DORADO}]  Descarga {indice}/{len(elegidos)}: episodio {episodio}[/]")
+        try:
+            if _descargar_episodio(anime, episodio):
+                completados += 1
+            else:
+                fallidos.append(episodio)
+        except KeyboardInterrupt:
+            console.print(f"[{C_ROSA}]  Descarga múltiple cancelada.[/]")
+            break
+    console.print(f"[{C_VERDE}]  Descargas completadas: {completados}/{len(elegidos)}[/]")
+    if fallidos:
+        console.print(f"[{C_ROSA}]  No completados: {', '.join(map(str, fallidos))}[/]")
 
 def _loop_episodio(anime, ep, episodios):
     with console.status(f"[{C_LAVANDA}]  ✦ Obteniendo servidores (ep. {ep})...[/]"):

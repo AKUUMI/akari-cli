@@ -6,126 +6,213 @@
     ██╔══██║██╔═██╗ ██╔══██║██╔══██╗██║
     ██║  ██║██║  ██╗██║  ██║██║  ██║██║
     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝
-          (˶˃ᆺ˂˶) ア カ リ (˶˃ᆺ˂˶)  1.5.0 ヽ(o^.^o)ﾉ
+          (˶˃ ᵕ ˂˶) ア カ リ 1.6.0 (˶˃ ᵕ ˂˶)
       ✧･ﾟ: *✧･ﾟ:*  ♡ ૮ ˶ᵔ ᵕ ᵔ˶ ა ♡  *:･ﾟ✧*:･ﾟ✧
 ```
 
-cliente de anime en español multiplataforma para terminal — inspirado en ani-cli ଘ(੭ˊ꒳ˋ)੭✧
+Akari es un cliente de anime en español para la terminal, inspirado en la sencillez de ani-cli. Puede buscar, reproducir y descargar episodios desde varias fuentes, mostrar portadas con Chafa y guardar tu progreso localmente. Funciona en Windows, Linux, macOS y Android mediante Termux. (｡•̀ᴗ-)✧
+
+El nombre es por alguien especial. (◡‿◡✿)
 
 ---
 
-## (｡♥‿♥｡) qué es esto
+## Qué necesitas
 
-akari es un cliente de anime interactivo hecho en python. busca, selecciona y reproduce anime con subtítulos o doblaje latino directamente desde tu terminal, sin abrir el navegador. diseñado con una estética kawaii (｡•̀ᴗ-)✧, soporta múltiples fuentes concurrentes, guarda tu progreso al minuto exacto y es completamente multiplataforma (Linux, Windows, macOS, Android/Termux).
+No hace falta saber programar. Solo necesitas instalar estas herramientas:
 
-el nombre es por alguien especial. ♡(◡‿◡✿)
+- Python 3.10 o una versión posterior.
+- Git para descargar y actualizar Akari.
+- mpv para reproducir los capítulos.
+- Chafa si quieres ver las portadas dentro de la terminal.
+- Una conexión a Internet.
+
+`yt-dlp` y las demás librerías de Python se instalan automáticamente junto con Akari.
 
 ---
 
-## ฅ(≧ω≦)ฅ requisitos
+## Instalar en Windows
 
-- python 3.10+
-- reproductor de video (mpv recomendado, vlc soportado)
-- yt-dlp (para extraer streams complejos)
-- chafa (opcional, para ver portadas de anime en arte ASCII)
+### 1. Instala Python
 
-### instalación de dependencias del sistema:
+Descarga Python desde [python.org](https://www.python.org/downloads/). Durante la instalación marca la casilla `Add Python to PATH` y después continúa con la instalación normal.
 
-**arch / endeavouros / manjaro / cachyos:**
-```bash
-sudo pacman -S mpv yt-dlp python chafa
+Abre PowerShell y comprueba que funciona:
+
+```powershell
+python --version
 ```
 
-**ubuntu / debian / mint / pop!_os:**
-```bash
-sudo apt install mpv python3 python3-pip python3-venv chafa
-pip install yt-dlp
+Debe aparecer Python 3.10 o una versión posterior.
+
+### 2. Instala Git
+
+Descarga Git desde [git-scm.com](https://git-scm.com/download/win) y usa las opciones recomendadas del instalador.
+
+Comprueba la instalación:
+
+```powershell
+git --version
 ```
 
-**windows:**
+### 3. Instala mpv
 
-🐍 **1. Python 3.10+**
-Descargado de [python.org](https://python.org/)
-- IMPORTANTE: marcar ✅ "Add Python to PATH" durante la instalación
-- Verificación: `python --version`
+La forma más sencilla es usar Scoop. Copia estos comandos en PowerShell, uno por uno:
 
-📦 **2. Git**
-Descargado de [git-scm.com](https://git-scm.com/)
-- Marcar "Git from the command line and also from 3rd-party software"
-- Verificación: `git --version`
-
-🎬 **3. mpv (reproductor de video)**
-Instalado con Scoop:
 ```powershell
 Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
 Invoke-RestMethod -Uri https://get.scoop.sh | Invoke-Expression
 scoop bucket add extras
 scoop install mpv
 ```
-- Verificación: `mpv --version`
 
-🖼️ **4. Chafa (portadas en la terminal)**
+Comprueba que mpv está disponible:
+
+```powershell
+mpv --version
+```
+
+### 4. Instala Chafa
+
+Chafa es opcional. Akari funciona sin él, pero no mostrará las portadas en la terminal.
+
 ```powershell
 winget install --id hpjansson.Chafa --exact
 ```
 
-📚 **5. Dependencias de Python**
+Si acabas de instalar mpv o Chafa, cierra PowerShell y vuelve a abrirlo antes de continuar.
+
+### 5. Descarga Akari
+
+Elige una carpeta donde quieras guardar el programa, abre PowerShell en ella y ejecuta:
+
 ```powershell
-pip install yt-dlp
+git clone https://github.com/AKUUMI/akari-cli.git
+cd akari-cli
+python -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -e .
+akari
 ```
-Y las del proyecto:
+
+La ventana mostrará el menú principal cuando todo esté listo. ヽ(・∀・)ﾉ
+
+### Abrir Akari otro día
+
+No necesitas instalarlo nuevamente. Abre PowerShell, entra en su carpeta y ejecuta:
+
 ```powershell
-cd C:\ruta\a\akari-cli
-pip install -e .
+cd C:\ruta\donde\guardaste\akari-cli
+.\.venv\Scripts\Activate.ps1
+akari
 ```
+
+Sustituye la ruta del ejemplo por la ubicación real de tu carpeta.
 
 ---
 
-## ૮(˶ík꒳ì˶)ა instalación
+## Instalar en Linux
 
-recomendamos usar un entorno virtual (venv) para evitar conflictos con tu sistema (๑>◡<๑).
+El instalador reconoce Arch, Debian, Ubuntu, Fedora, openSUSE, Void, Alpine y Gentoo.
 
-### script automático (solo linux):
 ```bash
-git clone https://github.com/AKUUMI/akari-cli
+git clone https://github.com/AKUUMI/akari-cli.git
 cd akari-cli
 chmod +x install.sh
 ./install.sh
 ```
 
-### instalación manual (windows / linux / macos):
+Al terminar, sigue la indicación que aparezca en la terminal para iniciar Akari.
+
+### Instalación manual en Linux o macOS
+
+Instala primero Python, Git, mpv y Chafa con el gestor de paquetes de tu sistema. Después ejecuta:
+
 ```bash
-git clone https://github.com/AKUUMI/akari-cli
+git clone https://github.com/AKUUMI/akari-cli.git
 cd akari-cli
-python -m venv .venv
-
-# en linux/macos:
+python3 -m venv .venv
 source .venv/bin/activate
-# en windows:
-.\.venv\Scripts\activate
-
-pip install -e .
+python -m pip install -e .
 akari
 ```
 
 ---
 
-## 🎮 uso
+## Instalar en Termux
 
-asegúrate de tener activo tu entorno virtual (¬‿¬). el menú interactivo te permite:
+Instala Termux desde F-Droid y abre la aplicación. Después copia estos comandos:
 
+```bash
+pkg update
+pkg install git
+git clone https://github.com/AKUUMI/akari-cli.git
+cd akari-cli
+chmod +x install.sh
+./install.sh
 ```
-[b] buscar anime
-[c] continuar viendo (reanuda en el minuto exacto)
-[g] explorar catálogo por géneros
-[f] favoritos
-[h] historial completo
-[q] salir
+
+Para guardar descargas en la carpeta compartida de Android, ejecuta una vez:
+
+```bash
+termux-setup-storage
 ```
 
-después de elegir un episodio puedes reproducirlo con `[v]` o descargarlo con `[d]`. las descargas se guardan en `Descargas/Akari`; en Termux ejecuta `termux-setup-storage` una vez para usar `~/storage/downloads/Akari`.
+Android pedirá permiso para acceder a los archivos. También necesitas tener VLC instalado para reproducir capítulos desde Termux. (´･ω･`)
 
-también puedes usar comandos directos ᕕ( ᐛ )ᕗ:
+---
+
+## Cómo usar Akari
+
+El menú principal muestra estas opciones:
+
+```text
+[b] Buscar anime
+[c] Continuar viendo
+[g] Explorar por género
+[f] Favoritos
+[h] Historial completo
+[q] Salir
+```
+
+Para ver un anime:
+
+1. Escribe `b` y presiona Enter.
+2. Escribe el nombre del anime.
+3. Elige un resultado escribiendo su número.
+4. Escribe el número del episodio.
+5. Elige qué quieres hacer.
+
+```text
+[v] Ver
+[d] Descargar uno
+[m] Descargar varios
+[q] Volver
+```
+
+### Descargar varios capítulos
+
+Puedes escribir una sola lista, un rango o una combinación:
+
+```text
+1-12
+1,4,8
+1-5,10-12
+```
+
+Akari comprobará que los episodios existan y mostrará cuántos descargará antes de pedir confirmación. Si un servidor falla, intentará con los siguientes disponibles.
+
+Las descargas se guardan aquí:
+
+| Sistema | Carpeta |
+|---|---|
+| Windows | `C:\Users\TU_USUARIO\Downloads\Akari` |
+| Linux y macOS | `~/Downloads/Akari` |
+| Termux | `~/storage/downloads/Akari` |
+
+### Comandos directos
+
+También puedes usar Akari sin entrar primero al menú:
+
 ```bash
 akari buscar "attack on titan"
 akari historial
@@ -134,70 +221,99 @@ akari favoritos
 
 ---
 
-## 🌍 compatibilidad
+## Actualizar Akari
 
-| sistema | estado | notas |
+Entra en la carpeta del programa y ejecuta:
+
+```bash
+git pull
+```
+
+Después activa nuevamente el entorno virtual y actualiza la instalación:
+
+```bash
+python -m pip install -e .
+```
+
+---
+
+## Estado de compatibilidad
+
+| Sistema | Estado | Notas |
 |---|---|---|
-| arch / derivadas | (◕‿◕) | soporte nativo perfecto |
-| debian / ubuntu | (◕‿◕) | soporte nativo |
-| windows | (◕‿◕) | usa %APPDATA% y requiere consola con UTF-8 |
-| macos | (◕‿◕) | requiere brew para mpv/chafa |
-| termux (android) | (◕‿◕) | abre la app de android de vlc automáticamente |
+| Windows | (＾▽＾) probado | Compatible con mpv, Chafa y descargas |
+| Ubuntu y Debian | (＾▽＾) probado automáticamente | Instalación mediante `install.sh` |
+| Arch y derivadas | (＾▽＾) compatible | Instalación mediante `install.sh` |
+| macOS | (＾▽＾) probado automáticamente | Requiere instalar mpv y Chafa por separado |
+| Termux | (＾▽＾) compatible | Reproduce mediante VLC para Android |
+
+Las pruebas automáticas se ejecutan en Windows, Ubuntu y macOS con Python 3.10 y 3.12.
 
 ---
 
-## 📡 estado de las fuentes
+## Estado de las fuentes
 
-akari realiza búsquedas concurrentes para máxima velocidad ヾ(≧ω≦*)ﾉ.
+Akari consulta las fuentes activas al mismo tiempo para que las búsquedas sean rápidas. ヾ(≧▽≦*)o
 
-| fuente | estado | contenido |
+| Fuente | Estado | Notas |
 |---|---|---|
-| jkanime | (^▽^) estable | subs m3u8 directos |
-| tioanime | (^▽^) estable | subs/doblaje |
-| animefenix | (×_×) fuera de línea | servidor sin respuesta, desactivado temporalmente |
-| animeid | (×_×) dominio comprometido | redirige fuera del servicio, desactivado por seguridad |
-| monoschinos | (^▽^) estable | enfocado en latino |
-| animeflv | (×_×) reproducción no disponible | devuelve episodios sin servidores, desactivado temporalmente |
+| JKAnime | (＾▽＾) activa | Episodios subtitulados y streams directos |
+| TioAnime | (＾▽＾) activa | Varias opciones de reproducción |
+| MonosChinos | (＾▽＾) activa | Contenido subtitulado y latino |
+| AnimeFLV | (×_×) desactivada | Actualmente devuelve episodios sin servidores |
+| AnimeFenix | (×_×) desactivada | El servidor no responde |
+| AnimeID | (×_×) desactivada | Su dominio redirige fuera del servicio |
+
+Las páginas externas pueden cambiar sin aviso. Una fuente desactivada no retrasa las demás ni aparece en los resultados.
 
 ---
 
-## 🚀 roadmap
+## Solución de problemas
 
-- [x] más fuentes de anime en español (TioAnime, MonosChinos, etc.) ✧(◡ ω ◡)
-- [x] portadas en terminal con chafa ✧(◡ ω ◡)
-- [x] guardar progreso de reproducción (minuto exacto en SQLite) ✧(◡ ω ◡)
-- [x] catálogo por géneros ✧(◡ ω ◡)
-- [x] soporte multiplataforma nativo para Windows ✧(◡ ω ◡)
-- [ ] soporte oficial para Anime AV1 (•ˋ _ ˊ•)
-- [ ] notificaciones de nuevos episodios (•ˋ _ ˊ•)
-- [ ] bypass para Cloudflare en AnimeFLV (•ˋ _ ˊ•)
-- [ ] paquete en AUR (akari-cli-git) (•ˋ _ ˊ•)
+### `python`, `git`, `mpv` o `chafa` no se reconoce como comando
 
----
+Cierra la terminal, vuelve a abrirla y prueba otra vez. Si el problema continúa, confirma que la herramienta fue instalada y añadida al `PATH`.
 
-## (｡>﹏<｡) apoyar el proyecto
+### PowerShell no permite activar `.venv`
 
-akari es y será siempre gratuito. si te gusta y quieres apoyar el desarrollo (café, ramen, servidores) puedes donar en [ko-fi](https://ko-fi.com/akuumi) — es completamente voluntario y no da ninguna ventaja ni acceso especial, pero te lo agradeceremos mucho ╰(◡‿◡╰).
+Ejecuta una vez:
 
----
+```powershell
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
 
-## (シ_ _)シ aviso legal
+Después vuelve a ejecutar `.\.venv\Scripts\Activate.ps1`.
 
-akari-cli es una herramienta open-source creada con fines educativos y de entretenimiento personal ( •̯ˍ•̯ ).
+### No aparece una portada
 
-este proyecto no hostea ni distribuye ningún contenido con derechos de autor.
-solo actúa como cliente que parsea fuentes públicas de terceros disponibles en internet.
-el uso depende de la disponibilidad y legalidad de dichas fuentes en tu país o región.
-no nos hacemos responsables del contenido accedido, ni promovemos la infracción de derechos de autor.
+Akari continúa funcionando aunque Chafa no esté instalado o la fuente no entregue una imagen. Comprueba la instalación con:
 
-recomendamos usar servicios legales como crunchyroll, netflix, hidive o amazon prime para apoyar a los creadores de la industria.
+```bash
+chafa --version
+```
 
-si eres titular de derechos y consideras que alguna fuente viola tus copyrights, contacta directamente al proveedor de la web fuente — no a este repositorio.
+### Un capítulo no reproduce o no descarga
 
-este proyecto es gratuito, sin fines de lucro y de uso personal/comunitario. cualquier donación es voluntaria y solo para apoyar el tiempo de desarrollo de la herramienta en código. uso bajo tu propio riesgo (￣^￣).
+Los videos pertenecen a servicios externos. Akari intenta varias opciones, pero puede ocurrir que todas estén temporalmente caídas. Prueba nuevamente más tarde u otro resultado del mismo anime.
 
 ---
 
-## (๑˃̵ᴗ˂̵) créditos
+## Aviso legal
 
-inspirado originalmente por la magia y simplicidad de ani-cli ヾ(＾-＾)ノ.
+Akari CLI es una herramienta de código abierto creada con fines educativos y para uso personal.
+
+El proyecto no aloja, copia ni distribuye videos. Solo interpreta información disponible en páginas públicas de terceros. La disponibilidad y legalidad de esas páginas depende de cada país. Usa Akari bajo tu responsabilidad y considera servicios oficiales como Crunchyroll, Netflix, HIDIVE o Amazon Prime para apoyar a los creadores.
+
+Si eres titular de derechos, cualquier reclamación relacionada con un video debe dirigirse al sitio externo que lo aloja, no a este repositorio.
+
+---
+
+## Apoyar el proyecto
+
+Akari es gratuito y ninguna donación desbloquea funciones. Si deseas apoyar voluntariamente el tiempo de desarrollo, puedes hacerlo en [Ko-fi](https://ko-fi.com/akuumi). (づ｡◕‿‿◕｡)づ
+
+---
+
+## Créditos
+
+Inspirado por la magia y sencillez de ani-cli. (シ_ _)シ

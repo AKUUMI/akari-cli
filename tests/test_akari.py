@@ -1,6 +1,6 @@
 import pytest
 from akari.historial import init_db, guardar_episodio, obtener_historial, obtener_progreso
-from akari.player import detectar_reproductor, reproducir_y_verificar, descargar_episodio, mostrar_portada_ascii
+from akari.player import detectar_reproductor, reproducir_y_verificar, descargar_episodio, mostrar_portada_ascii, parsear_episodios
 from akari.scrapers import buscar_en_todas, _episodios_desde_javascript, _videos_desde_javascript
 
 # ── Historial ─────────────────────────────────────────────────────────────────
@@ -112,3 +112,11 @@ def test_descargar_episodio_construye_comando_seguro(tmp_path, monkeypatch):
     assert comandos[0][-1] == "https://example.com/video"
     assert "Referer:https://example.com/" in comandos[0]
     assert "--windows-filenames" in comandos[0]
+
+def test_parsear_episodios_admite_rangos_y_listas():
+    assert parsear_episodios("1-3, 5, 8-9", range(1, 11)) == [1, 2, 3, 5, 8, 9]
+
+@pytest.mark.parametrize("seleccion", ["", "5-2", "1,x", "1-20"])
+def test_parsear_episodios_rechaza_selecciones_invalidas(seleccion):
+    with pytest.raises((TypeError, ValueError)):
+        parsear_episodios(seleccion, range(1, 11))

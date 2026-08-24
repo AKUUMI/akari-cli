@@ -13,6 +13,7 @@
 - pruebas automáticas para Windows, Linux y macOS
 - portadas con Chafa endurecidas para imágenes JPG, PNG y WebP con descarga protegida por timeout
 - descarga de capítulos mediante `yt-dlp` en Windows, Linux y Termux
+- descarga múltiple mediante rangos y listas de episodios
 
 ## 1.5.0
 - soporte total para Windows:

@@ -206,6 +206,27 @@ def descargar_episodio(servidores, titulo, episodio, referer=None, destino=None)
         try:
             if subprocess.run(cmd).returncode == 0:
                 return True, carpeta
-        except (OSError, KeyboardInterrupt):
+        except KeyboardInterrupt:
+            raise
+        except OSError:
             return False, carpeta
     return False, carpeta
+
+def parsear_episodios(texto, disponibles):
+    permitidos = set(disponibles)
+    seleccionados = set()
+    for parte in texto.replace(" ", "").split(","):
+        if not parte:
+            raise ValueError
+        if "-" in parte:
+            inicio, fin = parte.split("-", 1)
+            inicio = int(inicio)
+            fin = int(fin)
+            if inicio > fin:
+                raise ValueError
+            seleccionados.update(range(inicio, fin + 1))
+        else:
+            seleccionados.add(int(parte))
+    if not seleccionados or not seleccionados.issubset(permitidos):
+        raise ValueError
+    return sorted(seleccionados)

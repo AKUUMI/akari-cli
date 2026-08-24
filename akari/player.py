@@ -3,8 +3,10 @@ import shutil
 import sys
 import os
 import re
-import urllib.request
 import tempfile
+from pathlib import Path
+
+import requests
 
 def detectar_reproductor():
     for player in ["mpv", "vlc", "cvlc"]:
@@ -135,18 +137,75 @@ def reproducir_y_verificar(url, titulo="Akari", episodio=1, player=None, referer
         return False, None, 0, False
 
 def mostrar_portada_ascii(url_imagen):
-    if not shutil.which("chafa"):
-        return
+    chafa = shutil.which("chafa")
+    if not chafa or not url_imagen:
+        return False
+    tmp_path = None
     try:
-        tmp = tempfile.NamedTemporaryFile(suffix=".jpg", delete=False)
+        respuesta = requests.get(
+            url_imagen,
+            headers={"User-Agent": "Mozilla/5.0"},
+            timeout=(5, 15),
+        )
+        respuesta.raise_for_status()
+        tipo = respuesta.headers.get("Content-Type", "").lower()
+        sufijo = ".png" if "png" in tipo else ".webp" if "webp" in tipo else ".jpg"
+        tmp = tempfile.NamedTemporaryFile(suffix=sufijo, delete=False)
         tmp_path = tmp.name
+        tmp.write(respuesta.content)
         tmp.close()
-        urllib.request.urlretrieve(url_imagen, tmp_path)
-        subprocess.run(["chafa", "--size=20x28", tmp_path], stderr=subprocess.DEVNULL)
-        os.remove(tmp_path)
+        ancho = max(20, min(40, shutil.get_terminal_size((80, 24)).columns // 2))
+        resultado = subprocess.run(
+            [chafa, "--format=symbols", "--colors=256", f"--size={ancho}x20", tmp_path],
+            stderr=subprocess.DEVNULL,
+        )
+        return resultado.returncode == 0
     except Exception:
-        if 'tmp_path' in locals() and os.path.exists(tmp_path):
+        return False
+    finally:
+        if tmp_path and os.path.exists(tmp_path):
             try:
                 os.remove(tmp_path)
             except Exception:
                 pass
+
+def directorio_descargas():
+    if es_termux():
+        compartido = Path.home() / "storage" / "downloads"
+        if compartido.is_dir():
+            return compartido / "Akari"
+    descargas = Path.home() / "Downloads"
+    if descargas.is_dir() or sys.platform == "win32":
+        return descargas / "Akari"
+    return Path.home() / "Akari"
+
+def descargar_episodio(servidores, titulo, episodio, referer=None, destino=None):
+    ejecutable = shutil.which("yt-dlp")
+    if not ejecutable:
+        return False, None
+    carpeta = Path(destino) if destino else directorio_descargas()
+    try:
+        carpeta.mkdir(parents=True, exist_ok=True)
+    except OSError:
+        return False, None
+    for servidor in servidores:
+        nombre_servidor = str(servidor.get("servidor") or "Servidor")
+        plantilla = f"{titulo} - Episodio {episodio} - {nombre_servidor}.%(ext)s"
+        cmd = [
+            ejecutable,
+            "--no-playlist",
+            "--restrict-filenames",
+            "--windows-filenames",
+            "--merge-output-format", "mp4",
+            "--paths", str(carpeta),
+            "--output", plantilla,
+        ]
+        if referer:
+            cmd += ["--add-header", f"Referer:{referer}"]
+        cmd.append(servidor["url"])
+        try:
+            if subprocess.run(cmd).returncode == 0:
+                return True, carpeta
+        except (OSError, KeyboardInterrupt):
+            return False, carpeta
+    return False, carpeta

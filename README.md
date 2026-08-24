@@ -64,7 +64,12 @@ scoop install mpv
 ```
 - Verificación: `mpv --version`
 
-📚 **4. Dependencias de Python**
+🖼️ **4. Chafa (portadas en la terminal)**
+```powershell
+winget install --id hpjansson.Chafa --exact
+```
+
+📚 **5. Dependencias de Python**
 ```powershell
 pip install yt-dlp
 ```
@@ -117,6 +122,8 @@ asegúrate de tener activo tu entorno virtual (¬‿¬). el menú interactivo te
 [h] historial completo
 [q] salir
 ```
+
+después de elegir un episodio puedes reproducirlo con `[v]` o descargarlo con `[d]`. las descargas se guardan en `Descargas/Akari`; en Termux ejecuta `termux-setup-storage` una vez para usar `~/storage/downloads/Akari`.
 
 también puedes usar comandos directos ᕕ( ᐛ )ᕗ:
 ```bash

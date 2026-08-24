@@ -24,7 +24,7 @@ from akari.historial import (
 from akari.logger import info, error, reproduccion, busqueda
 from akari.player import (
     reproducir, reproducir_y_verificar, detectar_reproductor,
-    es_termux, mostrar_portada_ascii
+    es_termux, mostrar_portada_ascii, descargar_episodio
 )
 
 init_db()
@@ -68,8 +68,37 @@ def flujo_ver_anime(anime):
     progreso = obtener_progreso(anime["slug"], anime["fuente"])
     ep = seleccionar_episodio(episodios, anime["titulo"], progreso)
 
+    accion = console.input(
+        f"[{C_LAVANDA}]  [v] Ver  [d] Descargar  [q] Volver [v]: [/]"
+    ).strip().lower() or "v"
+    if accion == "q":
+        return
+    if accion == "d":
+        _descargar_episodio(anime, ep)
+        return
+
     while ep is not None:
         ep = _loop_episodio(anime, ep, episodios)
+
+def _descargar_episodio(anime, ep):
+    with console.status(f"[{C_LAVANDA}]  Obteniendo servidores (ep. {ep})...[/]"):
+        servidores = obtener_video(anime["slug"], ep, anime["fuente"])
+    if not servidores:
+        console.print(f"[{C_ROSA}]  No se encontraron servidores para descargar.[/]")
+        return
+    console.print(f"[{C_LAVANDA}]  Iniciando descarga con yt-dlp...[/]")
+    ok, carpeta = descargar_episodio(
+        servidores,
+        anime["titulo"],
+        ep,
+        referer=obtener_referer(anime["fuente"]),
+    )
+    if ok:
+        console.print(f"[{C_VERDE}]  Capítulo guardado en: {carpeta}[/]")
+    elif carpeta:
+        console.print(f"[{C_ROSA}]  Ningún servidor permitió completar la descarga.[/]")
+    else:
+        console.print(f"[{C_ROSA}]  yt-dlp no está instalado o no se pudo crear la carpeta.[/]")
 
 def _loop_episodio(anime, ep, episodios):
     with console.status(f"[{C_LAVANDA}]  ✦ Obteniendo servidores (ep. {ep})...[/]"):

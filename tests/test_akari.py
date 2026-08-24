@@ -1,6 +1,6 @@
 import pytest
 from akari.historial import init_db, guardar_episodio, obtener_historial, obtener_progreso
-from akari.player import detectar_reproductor, reproducir_y_verificar
+from akari.player import detectar_reproductor, reproducir_y_verificar, descargar_episodio, mostrar_portada_ascii
 from akari.scrapers import buscar_en_todas, _episodios_desde_javascript, _videos_desde_javascript
 
 # ── Historial ─────────────────────────────────────────────────────────────────
@@ -85,3 +85,30 @@ def test_videos_desde_javascript_admite_objetos_y_listas():
 
     assert _videos_desde_javascript(objeto)["SUB"][0]["title"] == "Uno"
     assert _videos_desde_javascript(lista)[0][0] == "Uno"
+
+def test_chafa_devuelve_false_si_no_esta_instalado(monkeypatch):
+    monkeypatch.setattr("akari.player.shutil.which", lambda _: None)
+
+    assert mostrar_portada_ascii("https://example.com/cover.jpg") is False
+
+def test_descargar_episodio_construye_comando_seguro(tmp_path, monkeypatch):
+    comandos = []
+    monkeypatch.setattr("akari.player.shutil.which", lambda _: "yt-dlp")
+    monkeypatch.setattr(
+        "akari.player.subprocess.run",
+        lambda cmd: comandos.append(cmd) or type("Result", (), {"returncode": 0})(),
+    )
+
+    ok, carpeta = descargar_episodio(
+        [{"servidor": "Prueba", "url": "https://example.com/video"}],
+        "Akari Test",
+        3,
+        referer="https://example.com/",
+        destino=tmp_path,
+    )
+
+    assert ok is True
+    assert carpeta == tmp_path
+    assert comandos[0][-1] == "https://example.com/video"
+    assert "Referer:https://example.com/" in comandos[0]
+    assert "--windows-filenames" in comandos[0]

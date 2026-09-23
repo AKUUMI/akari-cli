@@ -4,6 +4,7 @@ import sys
 import os
 import re
 import tempfile
+import importlib.util
 from pathlib import Path
 
 import requests
@@ -181,7 +182,11 @@ def directorio_descargas():
 
 def descargar_episodio(servidores, titulo, episodio, referer=None, destino=None):
     ejecutable = shutil.which("yt-dlp")
-    if not ejecutable:
+    if ejecutable:
+        comando = [ejecutable]
+    elif importlib.util.find_spec("yt_dlp") is not None:
+        comando = [sys.executable, "-m", "yt_dlp"]
+    else:
         return False, None
     carpeta = Path(destino) if destino else directorio_descargas()
     try:
@@ -190,10 +195,14 @@ def descargar_episodio(servidores, titulo, episodio, referer=None, destino=None)
         return False, None
     for servidor in servidores:
         nombre_servidor = str(servidor.get("servidor") or "Servidor")
-        plantilla = f"{titulo} - Episodio {episodio} - {nombre_servidor}.%(ext)s"
-        cmd = [
-            ejecutable,
+        nombre = re.sub(r'[<>:"/\\|?*\x00-\x1f]', "_", f"{titulo} - Episodio {episodio} - {nombre_servidor}")
+        plantilla = nombre[:180].replace("%", "%%") + ".%(ext)s"
+        cmd = comando + [
             "--no-playlist",
+            "--continue",
+            "--socket-timeout", "8",
+            "--retries", "2",
+            "--fragment-retries", "2",
             "--restrict-filenames",
             "--windows-filenames",
             "--merge-output-format", "mp4",
@@ -202,7 +211,7 @@ def descargar_episodio(servidores, titulo, episodio, referer=None, destino=None)
         ]
         if referer:
             cmd += ["--add-header", f"Referer:{referer}"]
-        cmd.append(servidor["url"])
+        cmd.extend(["--", servidor["url"]])
         try:
             if subprocess.run(cmd).returncode == 0:
                 return True, carpeta
@@ -222,7 +231,7 @@ def parsear_episodios(texto, disponibles):
             inicio, fin = parte.split("-", 1)
             inicio = int(inicio)
             fin = int(fin)
-            if inicio > fin:
+            if inicio > fin or not permitidos or inicio < min(permitidos) or fin > max(permitidos) or fin - inicio + 1 > len(permitidos):
                 raise ValueError
             seleccionados.update(range(inicio, fin + 1))
         else:

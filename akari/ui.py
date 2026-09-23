@@ -50,19 +50,33 @@ def mostrar_resultados(resultados):
     console.print()
 
 def seleccionar_anime(resultados):
-    mostrar_resultados(resultados)
-    console.print(f"[{C_GRIS}]  [0] Volver[/]")
+    if not resultados:
+        return None
+    pagina = 0
+    por_pagina = 10
     while True:
-        eleccion = Prompt.ask(f"[{C_LAVANDA}]  ✧ Elige un número[/]", default="1")
-        if eleccion.strip() == "0" or eleccion.strip() == "":
+        inicio = pagina * por_pagina
+        visibles = resultados[inicio:inicio + por_pagina]
+        mostrar_resultados(visibles)
+        console.print(f"[{C_GRIS}]  Página {pagina + 1}/{(len(resultados) + por_pagina - 1) // por_pagina} · {len(resultados)} resultados[/]")
+        console.print(f"[{C_GRIS}]  [n] Siguiente  [p] Anterior  [q/0] Volver[/]")
+        eleccion = Prompt.ask(f"[{C_LAVANDA}]  ✧ Elige un número[/]", default="1").strip().lower()
+        if eleccion in {"q", "0"}:
             return None
+        if eleccion == "n" and inicio + por_pagina < len(resultados):
+            pagina += 1
+            continue
+        if eleccion == "p" and pagina > 0:
+            pagina -= 1
+            continue
         try:
             idx = int(eleccion) - 1
-            if 0 <= idx < len(resultados):
-                return resultados[idx]
+            if 0 <= idx < len(visibles):
+                return visibles[idx]
         except ValueError:
             pass
-        console.print(f"[{C_ROSA}]  Por favor elige un número válido[/]")
+        console.print(f"[{C_ROSA}]  Elige un número de esta página o una opción de navegación.[/]")
+
 
 def mostrar_info_anime(info, titulo):
     if not info:
@@ -153,16 +167,22 @@ def seleccionar_episodio(episodios, anime_titulo, progreso_anterior=None):
     console.print(Align.center(panel))
     console.print()
 
-    default_ep = str(progreso_anterior["episodio"]) if progreso_anterior else "1"
+    if not episodios:
+        return None
+    anterior = progreso_anterior.get("episodio") if progreso_anterior else None
+    default_ep = str(anterior if anterior in episodios else min(episodios))
+    console.print(f"[{C_GRIS}]  [q] Volver[/]")
     while True:
         eleccion = Prompt.ask(f"[{C_LAVANDA}]  ✧ Número de episodio[/]", default=default_ep)
+        if eleccion.strip().lower() in {"q", "0"}:
+            return None
         try:
             ep = int(eleccion)
             if ep in episodios:
                 return ep
         except ValueError:
             pass
-        console.print(f"[{C_ROSA}]  Episodio inválido. Rango: 1–{max(episodios)}[/]")
+        console.print(f"[{C_ROSA}]  Episodio inválido. Disponibles: {', '.join(map(str, episodios[:25]))}[/]")
 
 def cuenta_regresiva_autoplay(segundos=5):
     console.print()
@@ -299,11 +319,7 @@ def seleccionar_genero(generos):
         console.print(f"[{C_ROSA}]  Número inválido[/]")
 
 def spinner(mensaje="Buscando"):
-    return Progress(
-        SpinnerColumn(style=C_LAVANDA),
-        TextColumn(f"[{C_ROSA}]{mensaje}...[/]"),
-        transient=True,
-    )
+    return console.status(f"[{C_ROSA}]{mensaje}...[/]", spinner_style=C_LAVANDA)
 
 def barra_carga(mensaje="Cargando"):
     return Progress(
@@ -322,7 +338,7 @@ def menu_principal(tiene_historial=False):
 
     opciones += [
         ("b", "Buscar anime", C_DORADO),
-        ("g", "Explorar por género", C_ROSA),
+        ("d", "Descargar episodios", C_ROSA),
         ("f", "Favoritos", C_LAVANDA),
         ("h", "Historial completo", C_AZUL),
         ("q", "Salir", C_GRIS),

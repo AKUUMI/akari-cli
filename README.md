@@ -168,7 +168,7 @@ El menú principal muestra estas opciones:
 ```text
 [b] Buscar anime
 [c] Continuar viendo
-[g] Explorar por género
+[d] Descargar episodios
 [f] Favoritos
 [h] Historial completo
 [q] Salir
@@ -217,6 +217,7 @@ También puedes usar Akari sin entrar primero al menú:
 akari buscar "attack on titan"
 akari historial
 akari favoritos
+akari descargar "naruto" --episodios "1-3,5" --fuente JKAnime --destino "./descargas"
 ```
 
 ---
@@ -260,11 +261,13 @@ Akari consulta las fuentes activas al mismo tiempo para que las búsquedas sean 
 | JKAnime | (＾▽＾) activa | Episodios subtitulados y streams directos |
 | TioAnime | (＾▽＾) activa | Varias opciones de reproducción |
 | MonosChinos | (＾▽＾) activa | Contenido subtitulado y latino |
-| AnimeFLV | (×_×) desactivada | Actualmente devuelve episodios sin servidores |
-| AnimeFenix | (×_×) desactivada | El servidor no responde |
-| AnimeID | (×_×) desactivada | Su dominio redirige fuera del servicio |
+| AnimeFLV | retirada | Búsquedas sin respuesta en la revisión del 22-09-2026 |
+| AnimeFenix | retirada | Conexión agotada en la revisión del 22-09-2026 |
+| AnimeID | retirada | Redirige a TikTok |
 
-Las páginas externas pueden cambiar sin aviso. Una fuente desactivada no retrasa las demás ni aparece en los resultados.
+Las páginas externas pueden cambiar sin aviso. Las fuentes retiradas ya no forman parte del código. La revisión comprobó búsqueda, episodios y resolución de video en las tres fuentes conservadas; algunos servidores individuales fallan.
+
+Las respuestas correctas se reutilizan durante 60 segundos (hasta 64 páginas). Los errores no se guardan. Los resultados aparecen en páginas de diez; usa `n`, `p` y `q` para navegar. Puedes volver con `q` al elegir episodios o un lote de descargas. Las descargas conservan archivos parciales para reanudarlos al repetir la misma selección con el mismo servidor y carpeta.
 
 ---
 

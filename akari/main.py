@@ -29,7 +29,7 @@ from akari.player import (
 
 init_db()
 
-def flujo_busqueda():
+def flujo_busqueda(descarga=False):
     query = console.input(f"[{C_LAVANDA}]  ✧ Buscar anime: [/]").strip()
     if not query:
         return
@@ -45,9 +45,9 @@ def flujo_busqueda():
     anime = seleccionar_anime(resultados)
     if anime is None:
         return
-    flujo_ver_anime(anime)
+    flujo_ver_anime(anime, descarga=descarga)
 
-def flujo_ver_anime(anime):
+def flujo_ver_anime(anime, descarga=False):
     separador()
     console.print(f"\n[{C_DORADO}]  ✦ {anime['titulo']}[/]  [{C_LAVANDA}]({anime['fuente']})[/]\n")
 
@@ -65,6 +65,9 @@ def flujo_ver_anime(anime):
         console.print(f"[{C_ROSA}]  No se pudieron obtener los episodios.[/]\n")
         return
 
+    if descarga:
+        _descargar_varios(anime, episodios)
+        return
     progreso = obtener_progreso(anime["slug"], anime["fuente"])
     while True:
         accion = console.input(
@@ -79,6 +82,8 @@ def flujo_ver_anime(anime):
         return
 
     ep = seleccionar_episodio(episodios, anime["titulo"], progreso)
+    if ep is None:
+        return
     if accion == "d":
         _descargar_episodio(anime, ep)
         return
@@ -86,7 +91,7 @@ def flujo_ver_anime(anime):
     while ep is not None:
         ep = _loop_episodio(anime, ep, episodios)
 
-def _descargar_episodio(anime, ep):
+def _descargar_episodio(anime, ep, destino=None):
     with console.status(f"[{C_LAVANDA}]  Obteniendo servidores (ep. {ep})...[/]"):
         servidores = obtener_video(anime["slug"], ep, anime["fuente"])
     if not servidores:
@@ -98,6 +103,7 @@ def _descargar_episodio(anime, ep):
         anime["titulo"],
         ep,
         referer=obtener_referer(anime["fuente"]),
+        destino=destino,
     )
     if ok:
         console.print(f"[{C_VERDE}]  Capítulo guardado en: {carpeta}[/]")
@@ -110,7 +116,9 @@ def _descargar_episodio(anime, ep):
 def _descargar_varios(anime, episodios):
     console.print(f"[{C_GRIS}]  Escribe un rango o una lista: 1-12, 1,4,8 o 1-5,10-12[/]")
     while True:
-        seleccion = console.input(f"[{C_LAVANDA}]  Capítulos: [/]").strip()
+        seleccion = console.input(f"[{C_LAVANDA}]  Capítulos ([q] volver): [/]").strip()
+        if seleccion.lower() == "q":
+            return
         try:
             elegidos = parsear_episodios(seleccion, episodios)
             break
@@ -279,6 +287,9 @@ def _loop_episodio(anime, ep, episodios):
             return None
 
 def flujo_catalogo():
+    if not GENEROS_CATALOGO:
+        console.print(f"[{C_GRIS}]  Catálogo no disponible. Usa Buscar anime.[/]")
+        return
     genero = seleccionar_genero_catalogo(GENEROS_CATALOGO)
     animes = CATALOGO[genero]
 
@@ -358,15 +369,15 @@ def cli(ctx):
     separador()
 
     if ctx.invoked_subcommand is None:
-        historial = obtener_historial(5)
         while True:
+            historial = obtener_historial(5)
             opcion = menu_principal(tiene_historial=bool(historial))
 
             if opcion == "b":
                 flujo_busqueda()
 
-            elif opcion == "g":
-                flujo_catalogo()
+            elif opcion == "d":
+                flujo_busqueda(descarga=True)
 
             elif opcion == "c":
                 flujo_continuar(historial)
@@ -422,6 +433,34 @@ def buscar(query):
             flujo_ver_anime(anime)
     else:
         console.print(f"[{C_ROSA}]  Sin resultados para '{q}'[/]")
+
+@cli.command()
+@click.argument("query")
+@click.option("--episodios", "seleccion", required=True, help="Lista o rango: 1-3,5")
+@click.option("--fuente", type=click.Choice(["JKAnime", "TioAnime", "MonosChinos"]))
+@click.option("--destino", type=click.Path(file_okay=False, writable=True))
+def descargar(query, seleccion, fuente, destino):
+    with spinner("Buscando"):
+        resultados = buscar_en_todas(query)
+    if fuente:
+        resultados = [item for item in resultados if item["fuente"] == fuente]
+    if not resultados:
+        raise click.ClickException("No se encontraron resultados.")
+    anime = seleccionar_anime(resultados)
+    if anime is None:
+        return
+    with spinner("Cargando episodios"):
+        disponibles = obtener_episodios(anime["slug"], anime["fuente"])
+    try:
+        elegidos = parsear_episodios(seleccion, disponibles)
+    except (TypeError, ValueError):
+        raise click.BadParameter("Selecciona episodios disponibles.", param_hint="--episodios")
+    fallidos = []
+    for episodio in elegidos:
+        if not _descargar_episodio(anime, episodio, destino=destino):
+            fallidos.append(episodio)
+    if fallidos:
+        raise click.ClickException("No completados: " + ", ".join(map(str, fallidos)))
 
 @cli.command()
 def historial():

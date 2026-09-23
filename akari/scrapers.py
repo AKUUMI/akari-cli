@@ -3,6 +3,9 @@ import re
 import json
 import base64
 import concurrent.futures
+import time
+import threading
+from collections import OrderedDict
 from urllib.parse import urlparse
 
 HEADERS = {
@@ -11,10 +14,7 @@ HEADERS = {
 }
 
 URL_JKANIME = "https://jkanime.net"
-URL_ANIMEFLV = "https://www4.animeflv.net"
 URL_TIOANIME = "https://tioanime.com"
-URL_ANIMEFENIX = "https://animefenix.tv"
-URL_ANIMEID = "https://www.animeid.tv"
 URL_MONOSCHINOS = "https://monoschinos.st"
 
 RESULTADOS_INVALIDOS = {
@@ -61,7 +61,19 @@ def _extraer_json_balanceado(texto, patron_inicio, bracket="{"):
             return texto[start:i + 1]
     return None
 
+_CACHE = OrderedDict()
+_CACHE_LOCK = threading.Lock()
+_CACHE_TTL = 60
+_CACHE_MAX = 64
+
 def _safe_get(url, extra_headers=None, timeout=8):
+    key = (url, tuple(sorted((extra_headers or {}).items())))
+    with _CACHE_LOCK:
+        cached = _CACHE.get(key)
+        if cached and time.monotonic() - cached[0] < _CACHE_TTL:
+            _CACHE.move_to_end(key)
+            return cached[1]
+        _CACHE.pop(key, None)
     try:
         h = {**HEADERS}
         if extra_headers:
@@ -72,6 +84,11 @@ def _safe_get(url, extra_headers=None, timeout=8):
         destino = (urlparse(r.url).hostname or "").removeprefix("www.")
         if origen != destino:
             return None
+        with _CACHE_LOCK:
+            _CACHE[key] = (time.monotonic(), r)
+            _CACHE.move_to_end(key)
+            while len(_CACHE) > _CACHE_MAX:
+                _CACHE.popitem(last=False)
         return r
     except Exception:
         return None
@@ -305,6 +322,8 @@ def jkanime_get_video_url(slug, episodio):
                 continue
             stream_url = jkanime_extraer_stream(src)
             url_final = stream_url if stream_url else src
+            if any(s["url"] == url_final for s in servidores):
+                continue
             servidores.append({
                 "servidor": nombres[i] if i < len(nombres) else f"Servidor {i + 1}",
                 "url": url_final,
@@ -312,135 +331,6 @@ def jkanime_get_video_url(slug, episodio):
                 "lang_key": "SUB",
                 "es_stream": stream_url is not None,
             })
-        return servidores
-    except Exception:
-        return []
-
-def animeflv_buscar(query):
-    url = f"{URL_ANIMEFLV}/browse?q={query.replace(' ', '+')}"
-    r = _safe_get(url)
-    if not r:
-        return []
-    try:
-        from bs4 import BeautifulSoup
-        soup = BeautifulSoup(r.text, "html.parser")
-        resultados = []
-        for item in soup.select("ul.ListAnimes li"):
-            title_tag = item.select_one("h3.Title")
-            img_tag = item.select_one("img")
-            link_tag = item.select_one("a")
-            type_tag = item.select_one("span.Type")
-            if title_tag and link_tag:
-                href = link_tag.get("href", "")
-                slug = href.strip("/").split("/")[-1] if href else ""
-                resultados.append({
-                    "titulo": title_tag.text.strip(),
-                    "slug": slug,
-                    "url": f"{URL_ANIMEFLV}{href}" if href.startswith("/") else href,
-                    "portada": img_tag.get("src") if img_tag else None,
-                    "tipo": type_tag.text.strip() if type_tag else "Anime",
-                    "fuente": "AnimeFLV",
-                })
-        return resultados
-    except Exception:
-        return []
-
-def animeflv_info(slug):
-    url = f"{URL_ANIMEFLV}/anime/{slug}"
-    r = _safe_get(url)
-    if not r:
-        return {}
-    try:
-        from bs4 import BeautifulSoup
-        soup = BeautifulSoup(r.text, "html.parser")
-        sinopsis_tag = soup.select_one("div.Description p")
-        sinopsis = sinopsis_tag.text.strip() if sinopsis_tag else None
-        estado = None
-        tipo = None
-        generos = []
-        for item in soup.select("nav.NvCnAB span"):
-            texto = item.text.strip()
-            if texto in ["En emisión", "Finalizado", "Próximamente"]:
-                estado = texto
-            elif texto in ["Anime", "OVA", "Especial", "Película"]:
-                tipo = texto
-        for g in soup.select("nav.NvCnAB a[href*='/browse?genre=']"):
-            generos.append(g.text.strip())
-        portada_tag = soup.select_one("figure img")
-        portada = portada_tag.get("src") if portada_tag else None
-        return {
-            "sinopsis": sinopsis,
-            "estado": estado,
-            "tipo": tipo,
-            "anio": None,
-            "generos": generos,
-            "portada": portada,
-        }
-    except Exception:
-        return {}
-
-def animeflv_episodios(slug):
-    url = f"{URL_ANIMEFLV}/anime/{slug}"
-    r = _safe_get(url)
-    if not r:
-        return []
-    try:
-        from bs4 import BeautifulSoup
-        soup = BeautifulSoup(r.text, "html.parser")
-        episodios = []
-        for ep in soup.select("ul.ListCaps li a"):
-            ep_num = ep.get("href", "").split("-")[-1]
-            if ep_num.isdigit():
-                episodios.append(int(ep_num))
-        return sorted(set(episodios)) if episodios else _episodios_desde_javascript(r.text)
-    except Exception:
-        return []
-
-def animeflv_get_video_url(slug, episodio):
-    url = f"{URL_ANIMEFLV}/ver/{slug}-{episodio}"
-    r = _safe_get(url, extra_headers={"Referer": f"{URL_ANIMEFLV}/"})
-    if not r:
-        return []
-    try:
-        servidores = []
-        videos = _videos_desde_javascript(r.text)
-        if isinstance(videos, dict):
-            for idioma, opciones in videos.items():
-                for opcion in opciones if isinstance(opciones, list) else []:
-                    video_url = opcion.get("code") if isinstance(opcion, dict) else None
-                    if video_url:
-                        servidores.append({
-                            "servidor": opcion.get("title") or "Servidor",
-                            "url": video_url,
-                            "idioma": idioma,
-                            "lang_key": idioma,
-                            "es_stream": ".m3u8" in video_url,
-                        })
-        server_matches = re.findall(
-            r'<button[^>]*data-server="([^"]*)"[^>]*>([^<]*)</button>',
-            r.text
-        )
-        for server_url, server_name in server_matches:
-            if server_url:
-                servidores.append({
-                    "servidor": server_name.strip() or "Servidor",
-                    "url": server_url,
-                    "idioma": "SUB Latino",
-                    "lang_key": "SUB",
-                    "es_stream": ".m3u8" in server_url,
-                })
-        scripts = re.findall(r'<script[^>]*>(.*?)</script>', r.text, re.DOTALL)
-        for script in scripts:
-            embeds = re.findall(r'["\'](https?://[^"\']+(?:embed|player|stream)[^"\']*)["\']', script)
-            for embed in embeds:
-                if not any(s["url"] == embed for s in servidores):
-                    servidores.append({
-                        "servidor": "Embed",
-                        "url": embed,
-                        "idioma": "SUB Latino",
-                        "lang_key": "SUB",
-                        "es_stream": ".m3u8" in embed,
-                    })
         return servidores
     except Exception:
         return []
@@ -569,265 +459,6 @@ def tioanime_get_video_url(slug, episodio):
                         "url": url,
                         "idioma": "SUB Latino",
                         "lang_key": "SUB",
-                        "es_stream": ".m3u8" in url,
-                    })
-        return servidores
-    except Exception:
-        return []
-
-def animefenix_buscar(query):
-    url = f"{URL_ANIMEFENIX}/animes?q={query.replace(' ', '+')}"
-    r = _safe_get(url)
-    if not r:
-        return []
-    try:
-        from bs4 import BeautifulSoup
-        soup = BeautifulSoup(r.text, "html.parser")
-        resultados = []
-        for item in soup.select("article.serie-card"):
-            title_tag = item.select_one("h3.serie-title a, h2 a")
-            img_tag = item.select_one("img")
-            link_tag = item.select_one("a")
-            if title_tag and link_tag:
-                href = link_tag.get("href", "")
-                slug = href.strip("/").split("/")[-1] if href else ""
-                resultados.append({
-                    "titulo": title_tag.text.strip(),
-                    "slug": slug,
-                    "url": href if href.startswith("http") else f"{URL_ANIMEFENIX}{href}",
-                    "portada": img_tag.get("src") if img_tag else None,
-                    "tipo": "Anime",
-                    "fuente": "AnimeFenix",
-                })
-        return resultados
-    except Exception:
-        return []
-
-def animefenix_info(slug):
-    url = f"{URL_ANIMEFENIX}/anime/{slug}"
-    r = _safe_get(url)
-    if not r:
-        return {}
-    try:
-        from bs4 import BeautifulSoup
-        soup = BeautifulSoup(r.text, "html.parser")
-        sinopsis_tag = soup.select_one("div.sinopsis p, div.description p")
-        descripcion_meta = soup.select_one('meta[name="description"]')
-        sinopsis = sinopsis_tag.text.strip() if sinopsis_tag else descripcion_meta.get("content") if descripcion_meta else None
-        estado = None
-        tipo = None
-        generos = []
-        for item in soup.select("span.status, div.status"):
-            texto = item.text.strip()
-            if texto in ["En emisión", "Finalizado", "Emisión"]:
-                estado = texto
-        for g in soup.select("a[href*='/genero/'], a[href*='/genre/']"):
-            generos.append(g.text.strip())
-        portada_tag = soup.select_one("figure.poster img, div.poster img")
-        portada = portada_tag.get("src") if portada_tag else None
-        return {
-            "sinopsis": sinopsis,
-            "estado": estado,
-            "tipo": tipo,
-            "anio": None,
-            "generos": generos,
-            "portada": portada,
-        }
-    except Exception:
-        return {}
-
-def animefenix_episodios(slug):
-    url = f"{URL_ANIMEFENIX}/anime/{slug}"
-    r = _safe_get(url)
-    if not r:
-        return []
-    try:
-        from bs4 import BeautifulSoup
-        soup = BeautifulSoup(r.text, "html.parser")
-        episodios = []
-        for ep in soup.select("ul.episode-list li a, div.episodes a"):
-            ep_num = ep.get_text(strip=True)
-            if ep_num.isdigit():
-                episodios.append(int(ep_num))
-            else:
-                m = re.search(r'(\d+)', ep_num)
-                if m:
-                    episodios.append(int(m.group(1)))
-        return sorted(set(episodios)) if episodios else []
-    except Exception:
-        return []
-
-def animefenix_get_video_url(slug, episodio):
-    url = f"{URL_ANIMEFENIX}/ver/{slug}-{episodio}"
-    r = _safe_get(url, extra_headers={"Referer": f"{URL_ANIMEFENIX}/"})
-    if not r:
-        return []
-    try:
-        servidores = []
-        iframe_matches = re.findall(
-            r'<iframe[^>]*src=["\']([^"\']+)["\'][^>]*>',
-            r.text
-        )
-        for i, iframe_url in enumerate(iframe_matches):
-            servidores.append({
-                "servidor": f"Servidor {i + 1}",
-                "url": iframe_url,
-                "idioma": "SUB/DUB Latino",
-                "lang_key": "MIX",
-                "es_stream": ".m3u8" in iframe_url,
-            })
-        server_matches = re.findall(
-            r'data-url=["\']([^"\']+)["\'][^>]*>([^<]*)</(?:button|a)>',
-            r.text
-        )
-        for server_url, server_name in server_matches:
-            if server_url and not any(s["url"] == server_url for s in servidores):
-                servidores.append({
-                    "servidor": server_name.strip() or "Servidor",
-                    "url": server_url,
-                    "idioma": "SUB/DUB Latino",
-                    "lang_key": "MIX",
-                    "es_stream": ".m3u8" in server_url,
-                })
-        scripts = re.findall(r'<script[^>]*>(.*?)</script>', r.text, re.DOTALL)
-        for script in scripts:
-            urls = re.findall(r'["\'](https?://[^"\']+(?:stream|video|player|embed)[^"\']*)["\']', script)
-            for url in urls:
-                if not any(s["url"] == url for s in servidores):
-                    servidores.append({
-                        "servidor": "Stream",
-                        "url": url,
-                        "idioma": "SUB/DUB Latino",
-                        "lang_key": "MIX",
-                        "es_stream": ".m3u8" in url,
-                    })
-        return servidores
-    except Exception:
-        return []
-
-def animeid_buscar(query):
-    url = f"{URL_ANIMEID}/buscar?q={query.replace(' ', '+')}"
-    r = _safe_get(url)
-    if not r:
-        return []
-    try:
-        from bs4 import BeautifulSoup
-        soup = BeautifulSoup(r.text, "html.parser")
-        resultados = []
-        for item in soup.select("div.anime-item, article.anime"):
-            title_tag = item.select_one("h3 a, h2 a, .title a")
-            img_tag = item.select_one("img")
-            link_tag = item.select_one("a")
-            if title_tag and link_tag:
-                href = link_tag.get("href", "")
-                slug = href.strip("/").split("/")[-1] if href else ""
-                resultados.append({
-                    "titulo": title_tag.text.strip(),
-                    "slug": slug,
-                    "url": href if href.startswith("http") else f"{URL_ANIMEID}{href}",
-                    "portada": img_tag.get("src") if img_tag else None,
-                    "tipo": "Anime",
-                    "fuente": "AnimeID",
-                })
-        return resultados
-    except Exception:
-        return []
-
-def animeid_info(slug):
-    url = f"{URL_ANIMEID}/anime/{slug}"
-    r = _safe_get(url)
-    if not r:
-        return {}
-    try:
-        from bs4 import BeautifulSoup
-        soup = BeautifulSoup(r.text, "html.parser")
-        sinopsis_tag = soup.select_one("div.sinopsis p, div.synopsis p")
-        sinopsis = sinopsis_tag.text.strip() if sinopsis_tag else None
-        estado = None
-        generos = []
-        for item in soup.select("span.status, div.status"):
-            texto = item.text.strip()
-            if texto in ["En emisión", "Finalizado"]:
-                estado = texto
-        for g in soup.select("a[href*='/genero/']"):
-            generos.append(g.text.strip())
-        portada_tag = soup.select_one("img.poster, div.poster img")
-        portada_meta = soup.select_one('meta[property="og:image"]')
-        portada = portada_tag.get("src") if portada_tag else portada_meta.get("content") if portada_meta else None
-        return {
-            "sinopsis": sinopsis,
-            "estado": estado,
-            "tipo": None,
-            "anio": None,
-            "generos": generos,
-            "portada": portada,
-        }
-    except Exception:
-        return {}
-
-def animeid_episodios(slug):
-    url = f"{URL_ANIMEID}/anime/{slug}"
-    r = _safe_get(url)
-    if not r:
-        return []
-    try:
-        from bs4 import BeautifulSoup
-        soup = BeautifulSoup(r.text, "html.parser")
-        episodios = []
-        for ep in soup.select("ul.episode-list li a, div.episode a"):
-            ep_num = ep.get_text(strip=True)
-            if ep_num.isdigit():
-                episodios.append(int(ep_num))
-            else:
-                m = re.search(r'(\d+)', ep_num)
-                if m:
-                    episodios.append(int(m.group(1)))
-        return sorted(set(episodios)) if episodios else []
-    except Exception:
-        return []
-
-def animeid_get_video_url(slug, episodio):
-    url = f"{URL_ANIMEID}/ver/{slug}-{episodio}"
-    r = _safe_get(url, extra_headers={"Referer": f"{URL_ANIMEID}/"})
-    if not r:
-        return []
-    try:
-        servidores = []
-        iframe_matches = re.findall(
-            r'<iframe[^>]*src=["\']([^"\']+)["\'][^>]*>',
-            r.text
-        )
-        for i, iframe_url in enumerate(iframe_matches):
-            servidores.append({
-                "servidor": f"Servidor {i + 1}",
-                "url": iframe_url,
-                "idioma": "SUB/DUB Latino",
-                "lang_key": "MIX",
-                "es_stream": ".m3u8" in iframe_url,
-            })
-        server_matches = re.findall(
-            r'data-src=["\']([^"\']+)["\'][^>]*>([^<]*)</(?:button|a)>',
-            r.text
-        )
-        for server_url, server_name in server_matches:
-            if server_url and not any(s["url"] == server_url for s in servidores):
-                servidores.append({
-                    "servidor": server_name.strip() or "Servidor",
-                    "url": server_url,
-                    "idioma": "SUB/DUB Latino",
-                    "lang_key": "MIX",
-                    "es_stream": ".m3u8" in server_url,
-                })
-        scripts = re.findall(r'<script[^>]*>(.*?)</script>', r.text, re.DOTALL)
-        for script in scripts:
-            urls = re.findall(r'["\'](https?://[^"\']+(?:stream|video|player|embed)[^"\']*)["\']', script)
-            for url in urls:
-                if not any(s["url"] == url for s in servidores):
-                    servidores.append({
-                        "servidor": "Stream",
-                        "url": url,
-                        "idioma": "SUB/DUB Latino",
-                        "lang_key": "MIX",
                         "es_stream": ".m3u8" in url,
                     })
         return servidores
@@ -1031,6 +662,8 @@ FUENTES = {
 
 def buscar_en_todas(query):
     resultados = []
+    if not FUENTES or not query.strip():
+        return resultados
     with concurrent.futures.ThreadPoolExecutor(max_workers=len(FUENTES)) as executor:
         futuros = {executor.submit(fuente["buscar"], query): nombre for nombre, fuente in FUENTES.items()}
         for futuro in concurrent.futures.as_completed(futuros):
@@ -1080,7 +713,6 @@ def obtener_info(slug, fuente):
 def obtener_referer(fuente):
     return {
         "JKAnime": f"{URL_JKANIME}/",
-        "AnimeFLV": f"{URL_ANIMEFLV}/",
         "TioAnime": f"{URL_TIOANIME}/",
         "MonosChinos": f"{URL_MONOSCHINOS}/",
     }.get(fuente)

@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="akari-cli",
-    version="1.6.0",
+    version="1.7.0",
     description="Tu cliente de anime en español kawaii (｡•̀ᴗ-)✧",
     packages=find_packages(),
     install_requires=[

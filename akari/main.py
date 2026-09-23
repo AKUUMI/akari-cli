@@ -462,6 +462,11 @@ def descargar(query, seleccion, fuente, destino):
     if fallidos:
         raise click.ClickException("No completados: " + ", ".join(map(str, fallidos)))
 
+@cli.command(help="Actualiza esta instalación desde origin/main.")
+def update():
+    from akari.updater import actualizar
+    actualizar()
+
 @cli.command()
 def historial():
     show_banner(console)

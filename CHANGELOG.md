@@ -1,5 +1,18 @@
 # changelog
 
+## 1.7.0
+- `akari update` actualiza el repositorio de la instalación desde `origin/main` y reinstala con el mismo Python
+- actualización sin cambios de rama ni sobrescritura de cambios locales, con errores recuperables si falla pip
+- caché limitada a 64 respuestas correctas durante 60 segundos para evitar consultas repetidas
+- resultados paginados de diez en diez, cancelación de episodios y lotes con `q`, e indicador de carga funcional
+- acceso a descargas desde el menú y comando `akari descargar` con rangos, fuente y destino configurables
+- reanudación de descargas, reintentos limitados y nombres de archivo seguros
+- ejecución de yt-dlp como módulo si no está en PATH
+- retirada del código de AnimeFLV, AnimeFenix y AnimeID tras pruebas de disponibilidad
+- eliminación de streams duplicados de JKAnime y actualización del historial en el menú
+- sustitución del acceso al catálogo vacío por descargas para evitar una selección sin salida
+- pruebas de regresión para caché, navegación, descargas y actualización
+
 ## 1.6.0
 - búsqueda ordenada por relevancia y filtrado de enlaces de navegación como `Notificaciones`
 - fuentes caídas o comprometidas desactivadas sin retrasar el resto de la búsqueda

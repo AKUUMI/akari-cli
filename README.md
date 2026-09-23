@@ -6,7 +6,7 @@
     ██╔══██║██╔═██╗ ██╔══██║██╔══██╗██║
     ██║  ██║██║  ██╗██║  ██║██║  ██║██║
     ╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝  ╚═╝╚═╝
-          (˶˃ ᵕ ˂˶) ア カ リ 1.6.0 (˶˃ ᵕ ˂˶)
+          (˶˃ ᵕ ˂˶) ア カ リ 1.7.0 (˶˃ ᵕ ˂˶)
       ✧･ﾟ: *✧･ﾟ:*  ♡ ૮ ˶ᵔ ᵕ ᵔ˶ ა ♡  *:･ﾟ✧*:･ﾟ✧
 ```
 
@@ -224,17 +224,39 @@ akari descargar "naruto" --episodios "1-3,5" --fuente JKAnime --destino "./desca
 
 ## Actualizar Akari
 
-Entra en la carpeta del programa y ejecuta:
+Activa el mismo entorno virtual con el que instalaste Akari y ejecuta desde cualquier carpeta:
 
 ```bash
-git pull
+akari update
 ```
 
-Después activa nuevamente el entorno virtual y actualiza la instalación:
+El comando localiza el repositorio asociado a esa instalación, obtiene `origin/main` y avanza `main` sin crear ramas ni commits de mezcla. Después reinstala Akari y las dependencias necesarias con el mismo Python. Al terminar, vuelve a abrir `akari`.
+
+Necesitas Git, conexión a Internet y una instalación hecha con `python -m pip install -e .`. El comando se detiene si estás en otra rama, tienes cambios locales en archivos versionados o commits propios pendientes. No borra archivos, historial, favoritos ni descargas. Git también bloquea la actualización si un archivo sin seguimiento sería sobrescrito.
+
+Si el repositorio se actualiza pero falla la instalación de dependencias, corrige la conexión o el error mostrado y repite `akari update`.
+
+### Primera actualización desde una versión anterior
+
+Las versiones anteriores a 1.7.0 todavía no tienen este comando. Desde la carpeta del repositorio y con tu entorno virtual activo, ejecuta una vez:
 
 ```bash
+git pull --ff-only origin main
 python -m pip install -e .
 ```
+
+Después podrás usar siempre `akari update`.
+
+### Novedades de 1.7.0
+
+- Actualización automática con `akari update`.
+- Caché de 60 segundos para acelerar las fichas y búsquedas repetidas.
+- Resultados paginados y opción de volver al elegir capítulos o descargas.
+- Descargas desde el menú y con `akari descargar`, carpeta configurable y reanudación de archivos parciales.
+- Retirada de AnimeFLV, AnimeFenix y AnimeID tras comprobar sus fallos.
+- JKAnime, TioAnime y MonosChinos conservadas tras verificar resolución de video.
+
+Consulta todos los cambios en [CHANGELOG.md](CHANGELOG.md).
 
 ---
 

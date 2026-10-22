@@ -342,3 +342,9 @@ Akari es gratuito y ninguna donación desbloquea funciones. Si deseas apoyar vol
 ## Créditos
 
 Inspirado por la magia y sencillez de ani-cli. (シ_ _)シ
+
+---
+
+## Licencia
+
+Este proyecto utiliza la licencia [MIT](LICENSE).
